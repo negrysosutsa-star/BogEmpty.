@@ -30,6 +30,7 @@ public class BogEmpty implements ClientModInitializer {
     public void onInitializeClient() {
         Config.load();
         
+        // Регистрация модулей
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
         modules.add(new ESPModule());
@@ -39,35 +40,43 @@ public class BogEmpty implements ClientModInitializer {
         modules.add(new InventoryMove());
         modules.add(new AutoTotem());
 
+        // 1. ЛОГИКА (Тик 20 раз в секунду)
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
             if (down && !guiKeyWasDown) {
-                if (mc.currentScreen == null) mc.setScreen(new ClickGUI());
-                else if (mc.currentScreen instanceof ClickGUI) mc.setScreen(null);
+                if (mc.currentScreen == null) {
+                    mc.setScreen(new ClickGUI());
+                } else if (mc.currentScreen instanceof ClickGUI) {
+                    mc.setScreen(null);
+                }
             }
             guiKeyWasDown = down;
 
             for (Module m : modules) {
-                if (m.isEnabled()) m.onTick();
-            }
-        });
-
-        WorldRenderEvents.LAST.register(ctx -> {
-            for (Module m : modules) {
-                if (m instanceof ESPModule esp && esp.isEnabled()) {
-                    // В 3D рендере tickDelta тоже нужно доставать правильно, если понадобится
+                // Аим обновляется в рендере, тут его пропускаем
+                if (m.isEnabled() && !(m instanceof AimAssist)) {
+                    m.onTick();
                 }
             }
         });
 
-        // ИСПРАВЛЕНИЕ ЗДЕСЬ
+        // 2. РЕНДЕР (Каждый фрейм - 60+ раз в секунду)
+        WorldRenderEvents.START.register(ctx -> {
+            for (Module m : modules) {
+                if (m.isEnabled() && m instanceof AimAssist aim) {
+                    aim.onRender(); // Плавный Аим
+                }
+            }
+        });
+
+        // 3. HUD (Стрелки)
         HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player == null || mc.currentScreen instanceof ClickGUI) return;
 
-            float tickDelta = tickCounter.getTickDelta(true); // Достаем float из RenderTickCounter
+            float tickDelta = tickCounter.getTickDelta(true);
 
             for (Module m : modules) {
                 if (m instanceof ESPModule esp && esp.isEnabled()) {
