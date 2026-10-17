@@ -40,7 +40,6 @@ public class AimAssist extends Module {
 
         ClientPlayerEntity p = mc.player;
 
-        // Сброс цели
         if (lockedTarget != null && (!lockedTarget.isAlive() || p.squaredDistanceTo(lockedTarget) > range.getFloat() * range.getFloat())) {
             lockedTarget = null;
         }
@@ -50,7 +49,6 @@ public class AimAssist extends Module {
 
         if (lockedTarget == null) return;
 
-        // Наводка
         Vec3d eye = p.getEyePos();
         Vec3d targetPos = getAimPoint(lockedTarget, p);
         
@@ -65,15 +63,14 @@ public class AimAssist extends Module {
         float yawDelta = MathHelper.wrapDegrees(targetYaw - p.getYaw());
         float pitchDelta = targetPitch - p.getPitch();
 
-        // Формула плавности SystemDLC
         double smoothFactor = 1.0 - Math.pow(0.72, speed.getFloat() * 0.1 * smooth.getFloat());
 
         float stepYaw = (float) (yawDelta * smoothFactor);
         float stepPitch = (float) (pitchDelta * smoothFactor);
 
-        // GCD Fix (привязка к сенсе мыши)
         if (gcdFix.getBool()) {
-            float sens = (float) mc.options.getMouseSensitivity().getValue();
+            // ИСПРАВЛЕНО: добавлено .floatValue() в конце
+            float sens = mc.options.getMouseSensitivity().getValue().floatValue();
             float f = sens * 0.6f + 0.2f;
             float gcd = f * f * f * 1.2f;
             stepYaw = Math.round(stepYaw / gcd) * gcd;
@@ -88,7 +85,6 @@ public class AimAssist extends Module {
         Vec3d base = e.getPos();
         double dist = p.distanceTo(e);
         
-        // Мультипоинт из SystemDLC
         double heightRatio = 0.78;
         if (dist <= 4.0) heightRatio = 0.55;
         else if (dist <= 12.0) heightRatio = 0.55 + ((dist - 4.0) / 8.0) * 0.3;
