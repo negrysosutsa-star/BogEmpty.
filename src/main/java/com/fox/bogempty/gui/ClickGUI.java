@@ -26,13 +26,12 @@ public class ClickGUI extends Screen {
     private final int BG_HEADER = 0xFF1A1A1A;
     private final int BG_CAT = 0xFF151515;
     private final int BG_ACTIVE = 0xFF2A2A2A;
-    private final int ACCENT = 0xFF9D4EDD; // Фиолетовый
+    private final int ACCENT = 0xFF9D4EDD;
     private final int TEXT = 0xFFCCCCCC;
     private final int TEXT_DIM = 0xFF777777;
 
     public ClickGUI() {
         super(Text.literal("BogEmpty"));
-        // Загружаем позицию
         this.panelX = Config.guiX;
         this.panelY = Config.guiY;
     }
@@ -44,23 +43,16 @@ public class ClickGUI extends Screen {
             try {
                 MinecraftClient mc = MinecraftClient.getInstance();
                 Identifier blurId = Identifier.of("bogempty", "shaders/post/blur.json");
-                if (mc.getResourceManager().getResource(blurId).isPresent()) {
-                    mc.gameRenderer.loadPostProcessor(blurId);
-                }
+                // Используем AW для доступа к методу
+                mc.gameRenderer.loadPostProcessor(blurId);
             } catch (Exception ignored) {}
         }
 
-        // Затемнение
-        ctx.fill(0, 0, this.width, this.height, 0x90000000);
-
-        // Тень
+        ctx.fill(0, 0, this.width, this.height, 0x50000000);
         ctx.fill(panelX - 3, panelY - 3, panelX + 450 + 3, panelY + 300 + 3, 0x40000000);
         
-        // Панель
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL);
         ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER);
-        
-        // Линия акцента
         ctx.fill(panelX, panelY + 25, panelX + 450, panelY + 26, ACCENT);
 
         ctx.drawText(this.textRenderer, "BogEmpty", panelX + 10, panelY + 8, ACCENT, true);
@@ -224,6 +216,15 @@ public class ClickGUI extends Screen {
         }
         if (keyCode == BogEmpty.bindGui) { this.close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
+    public void close() {
+        // Выключаем блюр при закрытии меню
+        try {
+            MinecraftClient.getInstance().gameRenderer.clearPostProcessor();
+        } catch (Exception ignored) {}
+        super.close();
     }
 
     private void updateSlider(Setting s, double mx, int xOffset) {
