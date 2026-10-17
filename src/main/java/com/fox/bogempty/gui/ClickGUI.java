@@ -20,16 +20,15 @@ public class ClickGUI extends Screen {
     private Setting activeSlider = null;
     private Module activeBind = null;
 
-    // === PREMIUM DARK PALETTE ===
-    private final int BG_PANEL_TOP = 0xFF141414;
-    private final int BG_PANEL_BOTTOM = 0xFF0A0A0A;
-    private final int BG_SIDEBAR = 0xFF111111;
-    private final int BG_MODULE = 0xFF1E1E1E;
-    private final int ACCENT = 0xFF9D4EDD;
+    // Палитра (Premium Dark)
+    private final int BG_PANEL_TOP = 0xFF1A1A1A;
+    private final int BG_PANEL_BOT = 0xFF0F0F0F;
+    private final int BG_SIDEBAR = 0xFF141414;
+    private final int BG_MODULE_HOVER = 0xFF252525;
+    private final int ACCENT = 0xFF9D4EDD; // Фиолетовый
     private final int ACCENT_GLOW = 0xFFC77DFF;
     private final int TEXT = 0xFFEDEDED;
     private final int TEXT_DIM = 0xFF888888;
-    private final int TOGGLE_OFF = 0xFF333333;
 
     public ClickGUI() {
         super(Text.literal("BogEmpty"));
@@ -39,36 +38,34 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // 1. Фон (сильное затемнение для контраста)
-        ctx.fill(0, 0, this.width, this.height, 0xC0000000);
+        // 1. Сильное затемнение фона
+        ctx.fill(0, 0, this.width, this.height, 0xB0000000);
 
-        // 2. Многослойная тень (создает эффект 3D)
-        ctx.fill(panelX - 6, panelY - 6, panelX + 460 + 6, panelY + 320 + 6, 0x10000000);
-        ctx.fill(panelX - 4, panelY - 4, panelX + 460 + 4, panelY + 320 + 4, 0x20000000);
-        ctx.fill(panelX - 2, panelY - 2, panelX + 460 + 2, panelY + 320 + 2, 0x40000000);
+        // 2. Тень (Drop Shadow) - создаем эффект парения
+        drawShadow(ctx, panelX - 5, panelY - 5, panelX + 460 + 5, panelY + 320 + 5);
 
-        // 3. Градиентная панель (сверху светлее, снизу темнее)
-        ctx.fillGradient(panelX, panelY, panelX + 460, panelY + 320, BG_PANEL_TOP, BG_PANEL_BOTTOM);
+        // 3. Основа (Градиент сверху-вниз)
+        ctx.fillGradient(panelX, panelY, panelX + 460, panelY + 320, BG_PANEL_TOP, BG_PANEL_BOT);
 
-        // 4. Шапка
-        ctx.fill(panelX, panelY, panelX + 460, panelY + 28, 0xFF1A1A1A);
-        ctx.fill(panelX, panelY + 28, panelX + 460, panelY + 29, ACCENT);
-        
-        // Логотип с "тенью"
-        ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 12, panelY + 10, ACCENT_GLOW, true);
-        ctx.drawText(this.textRenderer, "§8v1.0", panelX + 425, panelY + 10, TEXT_DIM, false);
+        // 4. Верхняя панель (Шапка)
+        ctx.fill(panelX, panelY, panelX + 460, panelY + 30, 0xFF222222);
+        ctx.fill(panelX, panelY + 30, panelX + 460, panelY + 31, ACCENT); // Акцентная линия
 
-        // 5. Сайдбар (Категории)
-        ctx.fill(panelX, panelY + 29, panelX + 110, panelY + 320, BG_SIDEBAR);
-        int catY = panelY + 42;
+        // Лого и версия
+        ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 11, ACCENT_GLOW, true);
+        ctx.drawText(this.textRenderer, "§8v1.0", panelX + 420, panelY + 11, TEXT_DIM, false);
+
+        // 5. Левая панель (Категории)
+        ctx.fill(panelX, panelY + 31, panelX + 110, panelY + 320, BG_SIDEBAR);
+        int catY = panelY + 45;
         for (Category cat : Category.values()) {
             drawCategory(ctx, cat, panelX + 5, catY, mouseX, mouseY);
             catY += 28;
         }
 
-        // 6. Контент (Модули)
-        ctx.enableScissor(panelX + 110, panelY + 29, panelX + 460, panelY + 320);
-        int y = panelY + 42 + (int) scrollY;
+        // 6. Правая панель (Модули и Настройки)
+        ctx.enableScissor(panelX + 110, panelY + 31, panelX + 460, panelY + 320);
+        int y = panelY + 45 + (int) scrollY;
         int x = panelX + 120;
 
         for (Module m : BogEmpty.modules) {
@@ -78,17 +75,16 @@ public class ClickGUI extends Screen {
             y += 26;
 
             if (m.isEnabled()) {
-                // Фон под настройками (чуть темнее модуля)
-                int settingsHeight = (m.getSettings().size() * 20) + 6;
+                // Рисуем фон под настройки (чуть темнее)
+                int settingsHeight = (m.getSettings().size() * 20) + 10;
                 ctx.fill(x, y - 4, x + 330, y - 4 + settingsHeight, 0xFF151515);
-                // Акцентная полоска слева от настроек
-                ctx.fill(x, y - 4, x + 2, y - 4 + settingsHeight, ACCENT);
+                ctx.fill(x, y - 4, x + 2, y - 4 + settingsHeight, ACCENT); // Полоска слева
 
                 for (Setting s : m.getSettings()) {
                     drawSetting(ctx, s, x + 15, y, mouseX, mouseY);
                     y += 20;
                 }
-                y += 6;
+                y += 8;
             }
         }
         ctx.disableScissor();
@@ -97,8 +93,14 @@ public class ClickGUI extends Screen {
         if (activeBind != null) {
             ctx.fill(panelX, panelY, panelX + 460, panelY + 320, 0xE0000000);
             ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу для §f" + activeBind.getName(), this.width / 2, this.height / 2, 0xFFFFFFFF);
-            ctx.drawCenteredTextWithShadow(this.textRenderer, "§7Esc — отмена", this.width / 2, this.height / 2 + 15, TEXT_DIM);
         }
+    }
+
+    // Красивая тень
+    private void drawShadow(DrawContext ctx, int x1, int y1, int x2, int y2) {
+        ctx.fill(x1, y1, x2, y2, 0x15000000);
+        ctx.fill(x1 + 2, y1 + 2, x2 - 2, y2 - 2, 0x30000000);
+        ctx.fill(x1 + 4, y1 + 4, x2 - 4, y2 - 4, 0x50000000);
     }
 
     private void drawCategory(DrawContext ctx, Category cat, int x, int y, int mx, int my) {
@@ -106,9 +108,8 @@ public class ClickGUI extends Screen {
         boolean hov = mx >= x && mx <= x + 100 && my >= y && my <= y + 22;
         
         if (act) {
-            // Красивый градиент для активной категории
             ctx.fillGradient(x, y, x + 100, y + 22, 0xFF2A2A2A, 0xFF1E1E1E);
-            ctx.fill(x, y, x + 3, y + 22, ACCENT); // Полоска
+            ctx.fill(x, y, x + 3, y + 22, ACCENT); // Яркая полоска
         } else if (hov) {
             ctx.fill(x, y, x + 100, y + 22, 0x15FFFFFF);
         }
@@ -119,22 +120,21 @@ public class ClickGUI extends Screen {
     private void drawModule(DrawContext ctx, Module m, int x, int y, int mx, int my) {
         boolean hov = mx >= x && mx <= x + 330 && my >= y && my <= y + 20;
         
-        // Фон модуля
         if (m.isEnabled() || hov) {
-            ctx.fill(x - 4, y - 2, x + 334, y + 20, BG_MODULE);
+            ctx.fill(x - 4, y - 2, x + 334, y + 20, BG_MODULE_HOVER);
         }
 
-        // Тоггл (Pill)
+        // Pill-тоггл
         int pillX = x + 305;
         int pillW = 24, pillH = 12;
-        int pillColor = m.isEnabled() ? ACCENT : TOGGLE_OFF;
+        int pillColor = m.isEnabled() ? ACCENT : 0xFF333333;
         ctx.fill(pillX, y + 2, pillX + pillW, y + 2 + pillH, pillColor);
         
-        // Белая точка внутри
+        // Кружок внутри
         int circleX = m.isEnabled() ? pillX + pillW - 11 : pillX + 1;
         ctx.fill(circleX, y + 3, circleX + 10, y + 13, 0xFFFFFFFF);
 
-        // Текст
+        // Имя модуля
         ctx.drawText(this.textRenderer, m.getName(), x + 5, y + 4, m.isEnabled() ? 0xFFFFFFFF : TEXT_DIM, false);
         
         // Бинд
@@ -146,9 +146,8 @@ public class ClickGUI extends Screen {
         if (s.getType() == Setting.Type.BOOLEAN) {
             boolean hov = mx >= x && mx <= x + 300 && my >= y && my <= y + 18;
             
-            // Маленький тоггл
             int pillX = x + 285;
-            int pillColor = s.getBool() ? ACCENT : TOGGLE_OFF;
+            int pillColor = s.getBool() ? ACCENT : 0xFF333333;
             ctx.fill(pillX, y + 4, pillX + 16, y + 12, pillColor);
             int circleX = s.getBool() ? pillX + 9 : pillX + 1;
             ctx.fill(circleX, y + 4, circleX + 7, y + 12, 0xFFFFFFFF);
@@ -166,10 +165,12 @@ public class ClickGUI extends Screen {
             
             ctx.drawText(this.textRenderer, s.getName(), x + 5, y + 4, TEXT_DIM, false);
             
-            // Красивый слайдер
-            ctx.fill(barX, y + 7, barX + barW, y + 10, 0xFF2A2A2A); // Фон
-            ctx.fill(barX, y + 7, barX + (int)(barW * pct), y + 10, hov ? ACCENT_GLOW : ACCENT); // Заполнение
-            ctx.fill(barX + (int)(barW * pct) - 2, y + 4, barX + (int)(barW * pct) + 2, y + 13, 0xFFFFFFFF); // Кружок
+            // Фон слайдера
+            ctx.fill(barX, y + 7, barX + barW, y + 10, 0xFF2A2A2A);
+            // Заполнение
+            ctx.fill(barX, y + 7, barX + (int)(barW * pct), y + 10, hov ? ACCENT_GLOW : ACCENT);
+            // Кружок
+            ctx.fill(barX + (int)(barW * pct) - 2, y + 4, barX + (int)(barW * pct) + 2, y + 13, 0xFFFFFFFF);
             
             ctx.drawText(this.textRenderer, String.format("%.1f", s.getFloat()), barX + barW + 10, y + 4, TEXT_DIM, false);
         }
@@ -183,11 +184,11 @@ public class ClickGUI extends Screen {
             return true;
         }
 
-        if (mx >= panelX && mx <= panelX + 460 && my >= panelY && my <= panelY + 28) {
+        if (mx >= panelX && mx <= panelX + 460 && my >= panelY && my <= panelY + 30) {
             dragX = (int) mx - panelX; dragY = (int) my - panelY; return true;
         }
 
-        int catY = panelY + 42;
+        int catY = panelY + 45;
         for (Category cat : Category.values()) {
             if (mx >= panelX + 5 && mx <= panelX + 105 && my >= catY && my <= catY + 22) {
                 currentCategory = cat;
@@ -197,7 +198,7 @@ public class ClickGUI extends Screen {
             catY += 28;
         }
 
-        int y = panelY + 42 + (int) scrollY;
+        int y = panelY + 45 + (int) scrollY;
         int x = panelX + 120;
 
         for (Module m : BogEmpty.modules) {
@@ -236,7 +237,7 @@ public class ClickGUI extends Screen {
                     }
                     y += 20;
                 }
-                y += 6;
+                y += 8;
             }
         }
         return super.mouseClicked(mx, my, button);
