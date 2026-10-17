@@ -14,6 +14,7 @@ import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 import org.joml.Matrix4f;
 
@@ -21,16 +22,14 @@ public class ESPModule extends Module {
     private final Setting showPlayers = new Setting("Show Players", true);
     private final Setting showMobs = new Setting("Show Mobs", false);
     private final Setting fill = new Setting("Fill Box", true);
-    private final Setting tracers = new Setting("Tracers", true);
-    private final Setting tracersOffhand = new Setting("Tracers Offhand", false); // От рук
+    private final Setting arrows = new Setting("Arrows", true);
 
     public ESPModule() {
         super("ESP", Category.RENDER);
         addSetting(showPlayers);
         addSetting(showMobs);
         addSetting(fill);
-        addSetting(tracers);
-        addSetting(tracersOffhand);
+        addSetting(arrows);
     }
 
     public void onRender(MatrixStack matrices, Camera camera, float tickDelta) {
@@ -47,7 +46,7 @@ public class ESPModule extends Module {
         RenderSystem.depthMask(false);
         RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
 
-        int lineColor = 0xFF9D4EDD; // Фиолетовый
+        int lineColor = 0xFF9D4EDD;
         int fillColor = 0x409D4EDD;
 
         for (Entity e : mc.world.getEntities()) {
@@ -59,9 +58,6 @@ public class ESPModule extends Module {
             if (isPlayer && !showPlayers.getBool()) continue;
             if (isMob && !showMobs.getBool()) continue;
             if (!isPlayer && !isMob) continue;
-
-            double dist = mc.player.squaredDistanceTo(le);
-            if (dist > 128 * 128) continue;
 
             double x = MathHelper.lerp(tickDelta, le.prevX, le.getX()) - camPos.x;
             double y = MathHelper.lerp(tickDelta, le.prevY, le.getY()) - camPos.y;
@@ -76,11 +72,11 @@ public class ESPModule extends Module {
             float h = (float)(box.maxY - box.minY);
 
             drawBox(m, w, h, lineColor, fill.getBool() ? fillColor : 0);
-            matrices.pop();
-
-            if (tracers.getBool()) {
-                drawTracer(mc, matrices, le, tickDelta, camPos, lineColor, tracersOffhand.getBool());
+            
+            if (arrows.getBool()) {
+                drawArrow(matrices, w, h, lineColor);
             }
+            matrices.pop();
         }
 
         RenderSystem.depthMask(true);
@@ -89,30 +85,27 @@ public class ESPModule extends Module {
         RenderSystem.disableBlend();
     }
 
-    private void drawTracer(MinecraftClient mc, MatrixStack matrices, Entity target, float tickDelta, Vec3d camPos, int color, boolean fromHand) {
-        Vec3d startVec;
-        if (fromHand) {
-            startVec = mc.player.getEyePos().add(mc.player.getRotationVector().multiply(1.0));
-        } else {
-            startVec = mc.player.getEyePos();
-        }
-        
-        double startX = startVec.x - camPos.x;
-        double startY = startVec.y - camPos.y;
-        double startZ = startVec.z - camPos.z;
-
-        double endX = MathHelper.lerp(tickDelta, target.prevX, target.getX()) - camPos.x;
-        double endY = MathHelper.lerp(tickDelta, target.prevY, target.getY()) - camPos.y + target.getHeight() / 2.0;
-        double endZ = MathHelper.lerp(tickDelta, target.prevZ, target.getZ()) - camPos.z;
+    // Рисуем вращающуюся 3D-стрелку (ромб с хвостом)
+    private void drawArrow(MatrixStack matrices, float w, float h, int color) {
+        float time = (float) (System.currentTimeMillis() % 100000L) / 1000f;
+        float angle = time * 90f; // Скорость вращения
 
         matrices.push();
+        // Поднимаем стрелку на уровень головы и отодвигаем от хита
+        matrices.translate(0, h * 0.5, 0);
+        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(angle));
+        matrices.translate(w + 0.3, 0, 0); // Радиус от игрока
+
         Matrix4f m = matrices.peek().getPositionMatrix();
         Tessellator tess = Tessellator.getInstance();
         BufferBuilder buf = tess.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-        
-        buf.vertex(m, (float)startX, (float)startY, (float)startZ).color(color);
-        buf.vertex(m, (float)endX, (float)endY, (float)endZ).color(color);
-        
+
+        // Хвост стрелки
+        buf.vertex(m, 0, 0, 0).color(color); buf.vertex(m, 0.4f, 0, 0).color(color);
+        // Наконечники
+        buf.vertex(m, 0.4f, 0, 0).color(color); buf.vertex(m, 0.2f, 0.2f, 0).color(color);
+        buf.vertex(m, 0.4f, 0, 0).color(color); buf.vertex(m, 0.2f, -0.2f, 0).color(color);
+
         BufferRenderer.drawWithGlobalProgram(buf.end());
         matrices.pop();
     }
