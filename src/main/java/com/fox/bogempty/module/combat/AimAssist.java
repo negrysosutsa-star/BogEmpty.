@@ -1,6 +1,5 @@
 package com.fox.bogempty.module.combat;
 
-import com.fox.bogempty.BogEmpty;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
@@ -12,10 +11,7 @@ import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.decoration.ArmorStandEntity;
-import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.CrossbowItem;
-import net.minecraft.item.Items;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -29,11 +25,7 @@ public class AimAssist extends Module {
     private final Setting range = new Setting("Range", 4.5f, 2.0f, 8.0f);
     private final Setting fov = new Setting("FOV", 90.0f, 10.0f, 360.0f);
     private final Setting holdAfterHit = new Setting("Hold", 5.0f, 0.0f, 30.0f);
-    private final Setting onlyLastHit = new Setting("Only Last Hit", false);
-    private final Setting crossbowAim = new Setting("Crossbow Aim", false);
-    private final Setting crossbowRange = new Setting("Crossbow Dist", 20.0f, 1.0f, 100.0f);
     private final Setting targetInvisible = new Setting("Invisible", false);
-    private final Setting targetOnlyNetherite = new Setting("Only Netherite", false);
 
     private final List<AimMode> aimModes = new ArrayList<>();
     private Entity lockedTarget = null;
@@ -47,11 +39,7 @@ public class AimAssist extends Module {
         addSetting(range);
         addSetting(fov);
         addSetting(holdAfterHit);
-        addSetting(onlyLastHit);
-        addSetting(crossbowAim);
-        addSetting(crossbowRange);
         addSetting(targetInvisible);
-        addSetting(targetOnlyNetherite);
 
         aimModes.add(new LegitAim());
         aimModes.add(new FreeAim());
@@ -65,7 +53,7 @@ public class AimAssist extends Module {
         AimMode currentMode = getMode();
         if (currentMode != null) currentMode.update();
 
-        // Проверка на удержание после удара
+        // Удержание после удара
         long now = System.currentTimeMillis();
         if (lastHitTarget != null && now - lastHitTime > holdAfterHit.getFloat() * 1000) {
             lastHitTarget = null; 
@@ -85,9 +73,8 @@ public class AimAssist extends Module {
         if (lockedTarget == null) return;
 
         Vec3d eye = p.getEyePos();
-        
-        // Высчитываем точку наводки
-        Vec3d targetPos = getAimPoint(lockedTarget, p);
+        double[] offsets = currentMode != null ? currentMode.getAimPoint(lockedTarget) : new double[]{0, 0, 0};
+        Vec3d targetPos = lockedTarget.getPos().add(offsets[0], offsets[1], offsets[2]);
 
         double diffX = targetPos.x - eye.x;
         double diffY = targetPos.y - eye.y;
@@ -103,14 +90,9 @@ public class AimAssist extends Module {
         float stepYaw = 0;
         float stepPitch = 0;
 
-        // Используем математику из SystemDLC
-        if (currentMode instanceof LegitAim legit) {
-            double[] delta = legit.calculateDelta(yawDelta, pitchDelta, (float) dist);
-            stepYaw = (float) delta[0];
-            stepPitch = (float) delta[1];
-        } else if (currentMode instanceof FreeAim free) {
-            double angleDist = Math.sqrt(yawDelta * yawDelta + pitchDelta * pitchDelta);
-            double[] delta = free.calculateDelta(yawDelta, pitchDelta, angleDist, dist, 50);
+        if (currentMode != null) {
+            // Используем метод calculateDelta из AimMode
+            double[] delta = currentMode.calculateDelta(yawDelta, pitchDelta, dist, 50);
             stepYaw = (float) delta[0];
             stepPitch = (float) delta[1];
         }
@@ -129,23 +111,6 @@ public class AimAssist extends Module {
     public void onAttack(Entity target) {
         this.lastHitTarget = target;
         this.lastHitTime = System.currentTimeMillis();
-    }
-
-    // Динамическая точка (из сурсов)
-    private Vec3d getAimPoint(Entity target, ClientPlayerEntity p) {
-        Vec3d base = target.getPos();
-        double dist = p.distanceTo(target);
-        
-        double heightRatio = 0.78;
-        if (dist <= 4.0) {
-            heightRatio = 0.55;
-        } else if (dist <= 12.0) {
-            heightRatio = 0.55 + ((dist - 4.0) / 8.0) * 0.3;
-        } else {
-            heightRatio = 0.85 + MathHelper.clamp((dist - 12.0) / 13.0, 0.0, 1.0) * 0.2;
-        }
-
-        return base.add(0, target.getHeight() * heightRatio, 0);
     }
 
     private AimMode getMode() {
@@ -167,17 +132,13 @@ public class AimAssist extends Module {
         for (Entity e : mc.world.getOtherEntities(p, search)) {
             if (!(e instanceof LivingEntity le) || !le.isAlive()) continue;
             if (e == p || e instanceof ArmorStandEntity) continue;
-
-            // Фильтр
             if (le.isInvisible() && !targetInvisible.getBool()) continue;
-            if (targetOnlyNetherite.getBool() && !hasNetherite(le)) continue;
 
             Vec3d center = le.getBoundingBox().getCenter();
             Vec3d dir = center.subtract(eye).normalize();
             double dot = dir.dotProduct(look);
             if (dot < Math.cos(Math.toRadians(fov.getFloat() / 2.0))) continue;
 
-            // Приоритет выбора
             String prio = priority.getEnum();
             double val;
             if (prio.equals("Distance")) val = p.squaredDistanceTo(e);
@@ -190,12 +151,5 @@ public class AimAssist extends Module {
             }
         }
         return best;
-    }
-
-    private boolean hasNetherite(LivingEntity e) {
-        return e.getEquippedStack(net.minecraft.entity.EquipmentSlot.HEAD).isOf(Items.NETHERITE_HELMET)
-            || e.getEquippedStack(net.minecraft.entity.EquipmentSlot.CHEST).isOf(Items.NETHERITE_CHESTPLATE)
-            || e.getEquippedStack(net.minecraft.entity.EquipmentSlot.LEGS).isOf(Items.NETHERITE_LEGGINGS)
-            || e.getEquippedStack(net.minecraft.entity.EquipmentSlot.FEET).isOf(Items.NETHERITE_BOOTS);
     }
 }
