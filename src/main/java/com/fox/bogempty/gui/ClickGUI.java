@@ -48,11 +48,15 @@ public class ClickGUI extends Screen {
             ctx.drawText(this.textRenderer, "§7TriggerBot", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.triggerEnabled, x, y, mouseX, mouseY); y += 20;
             drawBind(ctx, "Bind", Config.bindTrigger, 1, x, y, mouseX, mouseY); y += 20;
-            drawEnum(ctx, "Mode", Config.triggerMode, x, y, mouseX, mouseY); y += 20;
-            drawEnum(ctx, "Targets", Config.triggerTargets, x, y, mouseX, mouseY); y += 20;
+            
+            drawToggle(ctx, "Only Crits", Config.triggerOnlyCrits, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Sprint Reset", Config.triggerSprintReset, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Range", (float)Config.triggerRange, 2f, 6f, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Custom Cooldown", Config.trigCustomCooldown, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "No Sweaps", Config.trigNoSweaps, x, y, mouseX, mouseY); y += 25;
+            
+            // Кого бить
+            drawToggle(ctx, "Target Players", Config.targetPlayers, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Target Mobs", Config.targetMobs, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Target Animals", Config.targetAnimals, x, y, mouseX, mouseY); y += 25;
 
             ctx.drawText(this.textRenderer, "§7AimAssist", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.aimEnabled, x, y, mouseX, mouseY); y += 20;
@@ -61,6 +65,7 @@ public class ClickGUI extends Screen {
             drawSlider(ctx, "Yaw Speed", (float)Config.aimYawSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Pitch Speed", (float)Config.aimPitchSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "FOV", (float)Config.aimFov, 30f, 180f, x, y, mouseX, mouseY); y += 20;
+
         } else if (category == 1) {
             ctx.drawText(this.textRenderer, "§7ESP", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.espEnabled, x, y, mouseX, mouseY); y += 20;
@@ -114,11 +119,6 @@ public class ClickGUI extends Screen {
         ctx.drawText(this.textRenderer, text + ": §d" + keyName, x, y + 2, hov ? ACCENT : TEXT, false);
     }
 
-    private void drawEnum(DrawContext ctx, String text, String val, int x, int y, int mx, int my) {
-        boolean hov = mx >= x && mx <= x + 260 && my >= y && my <= y + 15;
-        ctx.drawText(this.textRenderer, text + ": §d" + val, x, y + 2, hov ? ACCENT : TEXT, false);
-    }
-
     private void drawSlider(DrawContext ctx, String text, float val, float min, float max, int x, int y, int mx, int my) {
         int barX = x + 130, barW = 120;
         boolean hov = mx >= barX && mx <= barX + barW && my >= y && my <= y + 12;
@@ -154,19 +154,14 @@ public class ClickGUI extends Screen {
             y += 15;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20;
             if (hit(mx, my, x, y, 260, 15)) { activeBind = 1; return true; } y += 20;
-            if (hit(mx, my, x, y, 260, 15)) { 
-                Config.triggerMode = Config.triggerMode.equals("Smart") ? "OnlyCrits" : "Smart";
-                return true; 
-            } y += 20;
-            if (hit(mx, my, x, y, 260, 15)) { 
-                if (Config.triggerTargets.equals("Players")) Config.triggerTargets = "Mobs";
-                else if (Config.triggerTargets.equals("Mobs")) Config.triggerTargets = "All";
-                else Config.triggerTargets = "Players";
-                return true; 
-            } y += 20;
+            
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.triggerOnlyCrits = !Config.triggerOnlyCrits; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.triggerSprintReset = !Config.triggerSprintReset; return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 1; updateSlider(mx); return true; } y += 20;
-            if (hit(mx, my, x+250, y, 25, 12)) { Config.trigCustomCooldown = !Config.trigCustomCooldown; return true; } y += 20;
-            if (hit(mx, my, x+250, y, 25, 12)) { Config.trigNoSweaps = !Config.trigNoSweaps; return true; } y += 25;
+            
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.targetPlayers = !Config.targetPlayers; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.targetMobs = !Config.targetMobs; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.targetAnimals = !Config.targetAnimals; return true; } y += 25;
 
             y += 15;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20;
@@ -175,6 +170,7 @@ public class ClickGUI extends Screen {
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 5; updateSlider(mx); return true; } y += 20;
+
         } else if (category == 1) {
             y += 15;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.espEnabled = !Config.espEnabled; return true; } y += 20;
