@@ -21,16 +21,16 @@ public class ESPModule extends Module {
     private final Setting showPlayers = new Setting("Show Players", true);
     private final Setting showMobs = new Setting("Show Mobs", false);
     private final Setting fill = new Setting("Fill Box", true);
-    
-    // === НОВАЯ НАСТРОЙКА ARROWS ===
-    private final Setting arrows = new Setting("Arrows", false);
+    private final Setting tracers = new Setting("Tracers", true);
+    private final Setting tracersOffhand = new Setting("Tracers Offhand", false); // От рук
 
     public ESPModule() {
         super("ESP", Category.RENDER);
         addSetting(showPlayers);
         addSetting(showMobs);
         addSetting(fill);
-        addSetting(arrows);
+        addSetting(tracers);
+        addSetting(tracersOffhand);
     }
 
     public void onRender(MatrixStack matrices, Camera camera, float tickDelta) {
@@ -47,8 +47,8 @@ public class ESPModule extends Module {
         RenderSystem.depthMask(false);
         RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
 
-        int lineColor = 0xFF00E5FF; // Голубой (Pulse style)
-        int fillColor = 0x4000E5FF;
+        int lineColor = 0xFF9D4EDD; // Фиолетовый
+        int fillColor = 0x409D4EDD;
 
         for (Entity e : mc.world.getEntities()) {
             if (!(e instanceof LivingEntity le) || le == mc.player || !le.isAlive()) continue;
@@ -63,7 +63,6 @@ public class ESPModule extends Module {
             double dist = mc.player.squaredDistanceTo(le);
             if (dist > 128 * 128) continue;
 
-            // Интерполяция позиции (плавность)
             double x = MathHelper.lerp(tickDelta, le.prevX, le.getX()) - camPos.x;
             double y = MathHelper.lerp(tickDelta, le.prevY, le.getY()) - camPos.y;
             double z = MathHelper.lerp(tickDelta, le.prevZ, le.getZ()) - camPos.z;
@@ -76,14 +75,11 @@ public class ESPModule extends Module {
             float w = (float)(box.maxX - box.minX) / 2f;
             float h = (float)(box.maxY - box.minY);
 
-            // Рисуем бокс
             drawBox(m, w, h, lineColor, fill.getBool() ? fillColor : 0);
-            
             matrices.pop();
 
-            // Рисуем Arrows (Tracers)
-            if (arrows.getBool()) {
-                drawArrow(matrices, mc, le, tickDelta, camPos, lineColor);
+            if (tracers.getBool()) {
+                drawTracer(mc, matrices, le, tickDelta, camPos, lineColor, tracersOffhand.getBool());
             }
         }
 
@@ -93,25 +89,27 @@ public class ESPModule extends Module {
         RenderSystem.disableBlend();
     }
 
-    private void drawArrow(MatrixStack matrices, MinecraftClient mc, Entity target, float tickDelta, Vec3d camPos, int color) {
-        // Начало линии — глаз игрока
-        Vec3d eyePos = mc.player.getEyePos();
-        double startX = eyePos.x - camPos.x;
-        double startY = eyePos.y - camPos.y;
-        double startZ = eyePos.z - camPos.z;
+    private void drawTracer(MinecraftClient mc, MatrixStack matrices, Entity target, float tickDelta, Vec3d camPos, int color, boolean fromHand) {
+        Vec3d startVec;
+        if (fromHand) {
+            startVec = mc.player.getEyePos().add(mc.player.getRotationVector().multiply(1.0));
+        } else {
+            startVec = mc.player.getEyePos();
+        }
+        
+        double startX = startVec.x - camPos.x;
+        double startY = startVec.y - camPos.y;
+        double startZ = startVec.z - camPos.z;
 
-        // Конец линии — центр цели
         double endX = MathHelper.lerp(tickDelta, target.prevX, target.getX()) - camPos.x;
         double endY = MathHelper.lerp(tickDelta, target.prevY, target.getY()) - camPos.y + target.getHeight() / 2.0;
         double endZ = MathHelper.lerp(tickDelta, target.prevZ, target.getZ()) - camPos.z;
 
         matrices.push();
         Matrix4f m = matrices.peek().getPositionMatrix();
-        
         Tessellator tess = Tessellator.getInstance();
         BufferBuilder buf = tess.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
         
-        // Линия
         buf.vertex(m, (float)startX, (float)startY, (float)startZ).color(color);
         buf.vertex(m, (float)endX, (float)endY, (float)endZ).color(color);
         
@@ -121,7 +119,6 @@ public class ESPModule extends Module {
 
     private void drawBox(Matrix4f m, float w, float h, int lineColor, int fillColor) {
         Tessellator tess = Tessellator.getInstance();
-        
         if (fillColor != 0) {
             BufferBuilder bufFill = tess.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
             bufFill.vertex(m, -w, 0, -w).color(fillColor); bufFill.vertex(m, w, 0, -w).color(fillColor); bufFill.vertex(m, w, h, -w).color(fillColor); bufFill.vertex(m, -w, h, -w).color(fillColor);
