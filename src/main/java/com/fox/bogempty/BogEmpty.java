@@ -12,6 +12,7 @@ import com.fox.bogempty.module.render.ESPModule;
 import com.fox.bogempty.module.render.Fullbright;
 import com.fox.bogempty.module.render.Nametags;
 import com.fox.bogempty.module.render.NoHurtCam;
+import com.fox.bogempty.module.render.NoRender;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
@@ -37,6 +38,7 @@ public class BogEmpty implements ClientModInitializer {
         modules.add(new Nametags());
         modules.add(new Fullbright());
         modules.add(new NoHurtCam());
+        modules.add(new NoRender());
         modules.add(new FastPlace());
         modules.add(new InventoryMove());
         modules.add(new AutoTotem());
@@ -78,7 +80,6 @@ public class BogEmpty implements ClientModInitializer {
         });
     }
 
-    // МЕТОД ДЛЯ ПОЛУЧЕНИЯ МОДУЛЯ (чтобы TriggerBot мог вызвать AimAssist)
     public static <T extends Module> T getModule(Class<T> clazz) {
         for (Module m : modules) {
             if (clazz.isInstance(m)) return clazz.cast(m);
