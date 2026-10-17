@@ -22,19 +22,18 @@ import java.util.List;
 public class AimAssist extends Module {
     private final Setting range = new Setting("Range", 4.5f, 2.0f, 8.0f);
     private final Setting fov = new Setting("FOV", 90.0f, 10.0f, 360.0f);
-    private final Setting speed = new Setting("Speed", 1.0f, 0.1f, 3.0f);
     private final Setting modeSetting = new Setting("Mode", "LegitAim", new String[]{"LegitAim", "FreeAim"});
     private final Setting targets = new Setting("Targets", "Players", new String[]{"Players", "Mobs", "All"});
     private final Setting gcdFix = new Setting("GCD Fix", true);
 
     private final List<AimMode> aimModes = new ArrayList<>();
     private Entity lockedTarget = null;
+    private long lastFrameTime = System.currentTimeMillis();
 
     public AimAssist() {
         super("AimAssist", Category.COMBAT);
         addSetting(range);
         addSetting(fov);
-        addSetting(speed);
         addSetting(modeSetting);
         addSetting(targets);
         addSetting(gcdFix);
@@ -79,19 +78,25 @@ public class AimAssist extends Module {
         float stepYaw = 0;
         float stepPitch = 0;
 
+        // Считаем время с прошлого кадра
+        long now = System.currentTimeMillis();
+        long timeDelta = now - lastFrameTime;
+        lastFrameTime = now;
+
         if (currentMode instanceof LegitAim legit) {
-            // Используем продвинутую математику из SystemDLC
             double[] delta = legit.calculateDelta(yawDelta, pitchDelta, (float) dist);
             stepYaw = (float) delta[0];
             stepPitch = (float) delta[1];
-        } else {
-            // Простой FreeAim
-            double smoothFactor = 1.0 - Math.pow(0.72, speed.getFloat() * 0.1);
-            stepYaw = (float) (yawDelta * smoothFactor);
-            stepPitch = (float) (pitchDelta * smoothFactor);
+        } 
+        else if (currentMode instanceof FreeAim free) {
+            // Вычисляем общий угол отклонения
+            double angleDist = Math.sqrt(yawDelta * yawDelta + pitchDelta * pitchDelta);
+            double[] delta = free.calculateDelta(yawDelta, pitchDelta, angleDist, dist, timeDelta);
+            stepYaw = (float) delta[0];
+            stepPitch = (float) delta[1];
         }
 
-        // GCD Фикс (привязка к мыши)
+        // GCD Фикс (привязка к сенсе мыши, чтобы не палиться)
         if (gcdFix.getBool()) {
             float sens = mc.options.getMouseSensitivity().getValue().floatValue();
             float f = sens * 0.6f + 0.2f;
@@ -100,8 +105,8 @@ public class AimAssist extends Module {
             stepPitch = Math.round(stepPitch / gcd) * gcd;
         }
 
-        // Ограничение поворота за кадр
-        float maxTurn = 20f;
+        // Ограничение максимального поворота за кадр
+        float maxTurn = 25f;
         stepYaw = MathHelper.clamp(stepYaw, -maxTurn, maxTurn);
         stepPitch = MathHelper.clamp(stepPitch, -maxTurn, maxTurn);
 
