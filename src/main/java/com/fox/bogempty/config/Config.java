@@ -1,18 +1,19 @@
-// TRIGGER
-public static boolean triggerEnabled = false;
-public static double triggerRange = 3.0;
-public static String triggerMode = "Smart"; // "Smart" (Умные) или "OnlyCrits" (Только криты)
-public static boolean triggerSmartCrits = true;
-public static boolean triggerOnlyCrits = true;
+// VISUALS
+public static boolean watermarkEnabled = true;
+public static boolean blurEnabled = true;
 
-public static boolean trigThroughEntities = false; // Через энтити
-public static boolean trigCustomCooldown = false; // Свой кулдаун
-public static double trigCustomCooldownValue = 80.0; // Процент готовности (80%)
-public static boolean trigTpsSync = false; // Синхронизация с ТПС сервера
-public static boolean trigNoSweaps = false; // Не бить свипами (в конце падения)
+// ESP
+public static boolean espEnabled = false;
+public static int espMode = 0; // 0 = Бокс, 1 = Свечение (пока только бокс)
+public static boolean espPlayers = true;
+public static boolean espMobs = false;
+public static boolean espShowFriends = true;
+public static boolean espFilterArmor = false; // Только в броне
+public static boolean espFilterNaked = false; // Только голые
 
-public static boolean trigOnlyWeapon = false; // Только с оружием
-public static boolean trigThroughGrass = true; // Через траву
-public static boolean trigTargetNaked = false; // Только голых
-public static boolean trigTargetInvisible = false; // Невидимых
-public static boolean trigTargetOnlyArmor = false; // Только в броне
+public static float espLineThickness = 2.0f;
+public static boolean espScaleByDistance = true;
+public static int espLineColor = 0xFF9D4EDD; // Фиолетовый
+public static boolean espFill = false;
+public static int espFillColor = 0x409D4EDD; // Полупрозрачный фиолетовый
+public static boolean espOutline = true;
