@@ -19,6 +19,11 @@ public class Config {
     public static String triggerTargets = "Players";
     public static boolean trigNoSweaps = false;
     public static boolean trigCustomCooldown = false;
+    
+    // TARGETS (для TargetUtil и триггера)
+    public static boolean targetPlayers = true;
+    public static boolean targetMobs = false;
+    public static boolean targetAnimals = false;
 
     // AIM
     public static boolean aimEnabled = false;
