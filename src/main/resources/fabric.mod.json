@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "bogempty",
+  "version": "${version}",
+  "name": "BogEmpty",
+  "description": "BogEmpty Client",
+  "authors": ["Fox"],
+  "environment": "client",
+  "entrypoints": {
+    "client": ["com.fox.bogempty.BogEmpty"]
+  },
+  "depends": {
+    "fabricloader": ">=0.16.0",
+    "fabric-api": "*",
+    "minecraft": "~1.21.4",
+    "java": ">=21"
+  }
+}
