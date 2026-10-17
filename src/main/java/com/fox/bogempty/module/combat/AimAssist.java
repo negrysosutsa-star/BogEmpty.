@@ -98,7 +98,7 @@ public class AimAssist extends Module {
             stepPitch = (float) delta[1];
         } else if (currentMode instanceof FreeAim free) {
             double angleDist = Math.sqrt(yawDelta * yawDelta + pitchDelta * pitchDelta);
-            double[] delta = free.calculateDelta(yawDelta, pitchDelta, angleDist, dist, 50.0);
+            double[] delta = free.calculateDelta(yawDelta, pitchDelta, angleDist, dist, 50);
             stepYaw = (float) delta[0];
             stepPitch = (float) delta[1];
         }
