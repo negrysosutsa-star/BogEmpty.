@@ -22,8 +22,8 @@ import java.util.List;
 public class AimAssist extends Module {
     private final Setting range = new Setting("Range", 4.5f, 2.0f, 8.0f);
     private final Setting fov = new Setting("FOV", 90.0f, 10.0f, 360.0f);
-    private final Setting speed = new Setting("Speed", 5.0f, 1.0f, 20.0f);
-    private final Setting modeSetting = new Setting("Mode", "FreeAim", new String[]{"FreeAim", "LegitAim"});
+    private final Setting speed = new Setting("Speed", 1.0f, 0.1f, 3.0f);
+    private final Setting modeSetting = new Setting("Mode", "LegitAim", new String[]{"LegitAim", "FreeAim"});
     private final Setting targets = new Setting("Targets", "Players", new String[]{"Players", "Mobs", "All"});
     private final Setting gcdFix = new Setting("GCD Fix", true);
 
@@ -39,19 +39,19 @@ public class AimAssist extends Module {
         addSetting(targets);
         addSetting(gcdFix);
 
-        aimModes.add(new FreeAim());
         aimModes.add(new LegitAim());
+        aimModes.add(new FreeAim());
     }
 
-    // Этот метод теперь вызывается каждый кадр из BogEmpty (WorldRenderEvents.START)
+    // Вызывается каждый кадр из BogEmpty (для плавности)
     public void onRender() {
         MinecraftClient mc = MinecraftClient.getInstance();
         if (!isEnabled() || mc.player == null || mc.world == null || mc.currentScreen != null) return;
 
         ClientPlayerEntity p = mc.player;
         AimMode currentMode = getMode();
+        if (currentMode != null) currentMode.update();
 
-        // Сброс цели
         if (lockedTarget != null && (!lockedTarget.isAlive() || p.squaredDistanceTo(lockedTarget) > range.getFloat() * range.getFloat())) {
             lockedTarget = null;
         }
@@ -62,8 +62,8 @@ public class AimAssist extends Module {
         if (lockedTarget == null) return;
 
         Vec3d eye = p.getEyePos();
-        double[] offsets = currentMode.getAimPoint(lockedTarget);
-        Vec3d targetPos = lockedTarget.getPos().add(offsets[0], offsets[1], offsets[2]);
+        double[] offsets = currentMode != null ? currentMode.getAimPoint(lockedTarget) : new double[]{0, 0, 0};
+        Vec3d targetPos = lockedTarget.getPos().add(offsets[0], lockedTarget.getHeight() * 0.6, offsets[2]);
 
         double diffX = targetPos.x - eye.x;
         double diffY = targetPos.y - eye.y;
@@ -76,15 +76,22 @@ public class AimAssist extends Module {
         float yawDelta = MathHelper.wrapDegrees(targetYaw - p.getYaw());
         float pitchDelta = targetPitch - p.getPitch();
 
-        // Формула плавности с учетом времени кадра (0.05f = ~20ms)
-        // Чем выше speed, тем ближе к 1.0 (мгновенный поворот)
-        float frameTime = 0.05f; 
-        float smoothFactor = (float) (1.0 - Math.pow(0.5, speed.getFloat() * frameTime));
+        float stepYaw = 0;
+        float stepPitch = 0;
 
-        float stepYaw = yawDelta * smoothFactor;
-        float stepPitch = pitchDelta * smoothFactor;
+        if (currentMode instanceof LegitAim legit) {
+            // Используем продвинутую математику из SystemDLC
+            double[] delta = legit.calculateDelta(yawDelta, pitchDelta, (float) dist);
+            stepYaw = (float) delta[0];
+            stepPitch = (float) delta[1];
+        } else {
+            // Простой FreeAim
+            double smoothFactor = 1.0 - Math.pow(0.72, speed.getFloat() * 0.1);
+            stepYaw = (float) (yawDelta * smoothFactor);
+            stepPitch = (float) (pitchDelta * smoothFactor);
+        }
 
-        // GCD Fix (привязка к сенсе)
+        // GCD Фикс (привязка к мыши)
         if (gcdFix.getBool()) {
             float sens = mc.options.getMouseSensitivity().getValue().floatValue();
             float f = sens * 0.6f + 0.2f;
@@ -93,8 +100,8 @@ public class AimAssist extends Module {
             stepPitch = Math.round(stepPitch / gcd) * gcd;
         }
 
-        // ВАЖНО: ограничиваем максимальный поворот за кадр, чтобы не было "телепорта"
-        float maxTurn = 15f; // Градусов за кадр
+        // Ограничение поворота за кадр
+        float maxTurn = 20f;
         stepYaw = MathHelper.clamp(stepYaw, -maxTurn, maxTurn);
         stepPitch = MathHelper.clamp(stepPitch, -maxTurn, maxTurn);
 
@@ -107,7 +114,7 @@ public class AimAssist extends Module {
         for (AimMode m : aimModes) {
             if (m.getName().equals(mode)) return m;
         }
-        return aimModes.get(0);
+        return aimModes.isEmpty() ? null : aimModes.get(0);
     }
 
     private Entity getTarget(MinecraftClient mc, ClientPlayerEntity p) {
