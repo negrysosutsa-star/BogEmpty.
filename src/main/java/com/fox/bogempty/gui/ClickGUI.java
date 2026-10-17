@@ -5,6 +5,7 @@ import com.fox.bogempty.config.Config;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
+import com.fox.bogempty.utils.Animation;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
@@ -20,6 +21,10 @@ public class ClickGUI extends Screen {
     private Setting activeSlider = null;
     private Module activeBind = null;
 
+    // Анимация появления
+    private final Animation animation = new Animation(2.0f);
+    private boolean closing = false;
+
     private final int ACCENT = 0xFF9D4EDD;
     private final int TEXT = 0xFFF0F0F0;
     private final int TEXT_DIM = 0xFF888888;
@@ -28,27 +33,48 @@ public class ClickGUI extends Screen {
         super(Text.literal("BogEmpty"));
         this.panelX = Config.guiX;
         this.panelY = Config.guiY;
+        animation.setTarget(1.0f);
+    }
+
+    @Override
+    public void close() {
+        closing = true;
     }
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // 1. Размытие/Затемнение
-        ctx.fill(0, 0, this.width, this.height, 0xB0000000);
-
-        // 2. Красивая тень (многослойная)
-        drawShadow(ctx, panelX - 4, panelY - 4, panelX + 480 + 4, panelY + 350 + 4);
-
-        // 3. Панель с градиентом
-        ctx.fillGradient(panelX, panelY, panelX + 480, panelY + 350, 0xFF181818, 0xFF0D0D0D);
+        float anim = animation.getValue();
         
-        // 4. Шапка
+        if (closing && anim <= 0.01f) {
+            super.close();
+            return;
+        }
+
+        // Затемнение (пропорционально анимации)
+        int alpha = (int) (anim * 180);
+        ctx.fill(0, 0, this.width, this.height, (alpha << 24));
+
+        // Масштабирование (эффект зума при открытии)
+        ctx.getMatrices().push();
+        float scale = 0.9f + (anim * 0.1f);
+        ctx.getMatrices().translate(panelX + 240, panelY + 175, 0);
+        ctx.getMatrices().scale(scale, scale, 1.0f);
+        ctx.getMatrices().translate(-(panelX + 240), -(panelY + 175), 0);
+
+        // Тень
+        ctx.fill(panelX - 4, panelY - 4, panelX + 480 + 4, panelY + 350 + 4, 0x40000000);
+        
+        // Панель
+        ctx.fillGradient(panelX, panelY, panelX + 480, panelY + 350, 0xFF181818, 0xFF0D0D0D);
         ctx.fill(panelX, panelY, panelX + 480, panelY + 35, 0xFF202020);
         ctx.fill(panelX, panelY + 35, panelX + 480, panelY + 36, ACCENT);
         
         ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 12, ACCENT, true);
-        ctx.drawText(this.textRenderer, "§8v1.0", panelX + 440, panelY + 12, TEXT_DIM, false);
+        
+        // FPS Счетчик в меню
+        ctx.drawText(this.textRenderer, "§8FPS: §f" + mc.getCurrentFps(), panelX + 420, panelY + 12, TEXT_DIM, false);
 
-        // 5. Категории (Левая панель)
+        // Категории
         ctx.fill(panelX, panelY + 36, panelX + 120, panelY + 350, 0xFF141414);
         int catY = panelY + 50;
         for (Category cat : Category.values()) {
@@ -56,7 +82,7 @@ public class ClickGUI extends Screen {
             catY += 30;
         }
 
-        // 6. Модули (Правая панель)
+        // Модули
         ctx.enableScissor(panelX + 120, panelY + 36, panelX + 480, panelY + 350);
         int y = panelY + 50 + (int) scrollY;
         int x = panelX + 135;
@@ -68,10 +94,9 @@ public class ClickGUI extends Screen {
             y += 28;
 
             if (m.isEnabled()) {
-                // Фон под настройки
                 int settingsHeight = (m.getSettings().size() * 22) + 10;
                 ctx.fill(x, y - 4, x + 320, y - 4 + settingsHeight, 0xFF1A1A1A);
-                ctx.fill(x, y - 4, x + 2, y - 4 + settingsHeight, ACCENT); // Полоска
+                ctx.fill(x, y - 4, x + 2, y - 4 + settingsHeight, ACCENT);
 
                 for (Setting s : m.getSettings()) {
                     drawSetting(ctx, s, x + 15, y, mouseX, mouseY);
@@ -82,17 +107,12 @@ public class ClickGUI extends Screen {
         }
         ctx.disableScissor();
 
+        ctx.getMatrices().pop();
+
         if (activeBind != null) {
             ctx.fill(panelX, panelY, panelX + 480, panelY + 350, 0xE0000000);
             ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу для §f" + activeBind.getName(), this.width / 2, this.height / 2, 0xFFFFFFFF);
         }
-    }
-
-    // Многослойная тень
-    private void drawShadow(DrawContext ctx, int x1, int y1, int x2, int y2) {
-        ctx.fill(x1, y1, x2, y2, 0x15000000);
-        ctx.fill(x1 + 2, y1 + 2, x2 - 2, y2 - 2, 0x30000000);
-        ctx.fill(x1 + 4, y1 + 4, x2 - 4, y2 - 4, 0x50000000);
     }
 
     private void drawCategory(DrawContext ctx, Category cat, int x, int y, int mx, int my) {
@@ -115,7 +135,6 @@ public class ClickGUI extends Screen {
             ctx.fill(x - 5, y - 2, x + 325, y + 22, 0xFF252525);
         }
 
-        // Тоггл (Pill)
         int pillX = x + 290;
         ctx.fill(pillX, y + 4, pillX + 24, y + 16, m.isEnabled() ? ACCENT : 0xFF333333);
         ctx.fill(m.isEnabled() ? pillX + 13 : pillX + 2, y + 5, m.isEnabled() ? pillX + 22 : pillX + 11, y + 15, 0xFFFFFFFF);
@@ -150,6 +169,8 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (closing) return false;
+
         if (activeBind != null) {
             activeBind.setKey(button);
             activeBind = null;
@@ -204,6 +225,8 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (closing) return false;
+        
         if (activeBind != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) { activeBind = null; return true; }
             activeBind.setKey(keyCode);
@@ -222,6 +245,7 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean mouseDragged(double mx, double my, int button, double dx, double dy) {
+        if (closing) return false;
         if (dragX >= 0) { 
             panelX = (int) mx - dragX; panelY = (int) my - dragY; 
             Config.guiX = panelX; Config.guiY = panelY; Config.save();
