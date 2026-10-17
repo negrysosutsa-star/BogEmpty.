@@ -9,7 +9,9 @@ public class Module {
     private final Category category;
     private boolean enabled;
     private int key;
-    private final List<Setting<?>> settings = new ArrayList<>();
+    
+    // Все настройки модуля
+    private final List<Setting> settings = new ArrayList<>();
 
     public Module(String name, Category category) {
         this.name = name;
@@ -27,15 +29,14 @@ public class Module {
     public int getKey() { return key; }
     public void setKey(int key) { this.key = key; }
     
-    public void addSetting(Setting<?> setting) {
+    // Добавить настройку
+    public void addSetting(Setting setting) {
         settings.add(setting);
     }
 
-    public List<Setting<?>> getSettings() { return settings; }
+    public List<Setting> getSettings() { return settings; }
 
-    // Метод, который вызывается каждый тик, если модуль включен
+    // Переопределяются в наследниках
     public void onTick() {}
-    
-    // Метод для рендера, если модуль включен
     public void onRender() {}
 }
