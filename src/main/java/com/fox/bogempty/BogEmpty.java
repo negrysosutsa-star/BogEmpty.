@@ -1,11 +1,12 @@
 package com.fox.bogempty;
 
+import com.fox.bogempty.config.Config;
 import com.fox.bogempty.gui.ClickGUI;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.module.combat.TriggerBot;
+import com.fox.bogempty.module.render.ESPModule;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
 
@@ -19,12 +20,11 @@ public class BogEmpty implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Регистрация модулей
+        Config.load();
         modules.add(new TriggerBot());
+        modules.add(new ESPModule());
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
-            mc.options.hudHidden = mc.currentScreen instanceof ClickGUI;
-            
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
@@ -34,19 +34,9 @@ public class BogEmpty implements ClientModInitializer {
             }
             guiKeyWasDown = down;
 
-            // Тикаем все включенные модули
             for (Module m : modules) {
-                if (m.isEnabled()) {
-                    m.onTick();
-                }
+                if (m.isEnabled()) m.onTick();
             }
-        });
-
-        HudRenderCallback.EVENT.register((ctx, tickDelta) -> {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc == null || mc.currentScreen instanceof ClickGUI) return;
-            ctx.fill(5, 5, 105, 20, 0xFF161616);
-            ctx.drawText(mc.textRenderer, "BogEmpty", 10, 9, 0xFF00E5FF, true);
         });
     }
 }
