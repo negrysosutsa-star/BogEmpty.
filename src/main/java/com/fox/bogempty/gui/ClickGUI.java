@@ -22,7 +22,7 @@ public class ClickGUI extends Screen {
     private Setting activeSlider = null;
     private Module activeBind = null;
     
-    // Открытые модули (для сворачивания настроек)
+    // Для сворачивания настроек
     private final Map<Module, Boolean> expanded = new HashMap<>();
 
     private final int BG_PANEL = 0xFF121212;
@@ -39,7 +39,10 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+        // Затемнение
         ctx.fill(0, 0, this.width, this.height, 0x90000000); 
+        
+        // Основная панель (Pulse Style)
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL);
         ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER);
         
@@ -65,7 +68,7 @@ public class ClickGUI extends Screen {
             drawModule(ctx, m, x, y, mouseX, mouseY);
             y += 20;
 
-            // Если модуль включен и развернут — рисуем настройки
+            // Если модуль включен — показываем настройки
             if (m.isEnabled() && expanded.getOrDefault(m, true)) {
                 for (Setting s : m.getSettings()) {
                     drawSetting(ctx, s, x + 10, y, mouseX, mouseY);
@@ -100,7 +103,7 @@ public class ClickGUI extends Screen {
         // Чекбокс
         ctx.fill(x, y + 2, x + 10, y + 12, m.isEnabled() ? ACCENT : 0xFF333333);
         
-        // Имя
+        // Имя модуля
         ctx.drawText(this.textRenderer, m.getName(), x + 15, y + 3, m.isEnabled() ? ACCENT : (hov ? 0xFFFFFF : TEXT), false);
         
         // Бинд
@@ -130,12 +133,14 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        // Если ждем бинд
         if (activeBind != null) {
             activeBind.setKey(button);
             activeBind = null;
             return true;
         }
 
+        // Драг окна
         if (mx >= panelX && mx <= panelX + 450 && my >= panelY && my <= panelY + 25) {
             dragX = (int) mx - panelX; dragY = (int) my - panelY; return true;
         }
@@ -151,6 +156,7 @@ public class ClickGUI extends Screen {
             catY += 25;
         }
 
+        // Клик по модулям и настройкам
         int y = panelY + 35 + (int) scrollY;
         int x = panelX + 110;
 
@@ -162,7 +168,7 @@ public class ClickGUI extends Screen {
                 m.toggle();
                 return true;
             }
-            // Бинд
+            // Бинд модуля
             if (mx >= x + 280 && mx <= x + 320 && my >= y && my <= y + 15) {
                 activeBind = m;
                 return true;
