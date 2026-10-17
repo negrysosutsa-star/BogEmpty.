@@ -29,28 +29,22 @@ public class ClickGUI extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, this.width, this.height, 0x80000000); 
-        
-        // Тень и панель
         ctx.fill(panelX - 2, panelY - 2, panelX + 450 + 2, panelY + 300 + 2, 0xFF000000); 
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL); 
         ctx.fill(panelX, panelY, panelX + 100, panelY + 300, BG_CAT);
-
-        // Шапка
         ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_CAT);
+
         ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 8, ACCENT, true);
         ctx.drawText(this.textRenderer, "v1.0", panelX + 415, panelY + 8, TEXT_DIM, false);
 
-        // Категории
         drawCat(ctx, "Combat", 0, panelX + 5, panelY + 40, mouseX, mouseY);
         drawCat(ctx, "Render", 1, panelX + 5, panelY + 70, mouseX, mouseY);
 
-        // Контент
         ctx.enableScissor(panelX + 105, panelY + 30, panelX + 450, panelY + 300);
         int y = panelY + 35 + (int) scrollY;
         int x = panelX + 115;
 
         if (category == 0) {
-            // TRIGGER BOT
             ctx.drawText(this.textRenderer, "§7TriggerBot", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.triggerEnabled, x, y, mouseX, mouseY); y += 20;
             drawBind(ctx, "Bind", Config.bindTrigger, 1, x, y, mouseX, mouseY); y += 20;
@@ -60,7 +54,6 @@ public class ClickGUI extends Screen {
             drawToggle(ctx, "Custom Cooldown", Config.trigCustomCooldown, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "No Sweaps", Config.trigNoSweaps, x, y, mouseX, mouseY); y += 25;
 
-            // AIM
             ctx.drawText(this.textRenderer, "§7AimAssist", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.aimEnabled, x, y, mouseX, mouseY); y += 20;
             drawBind(ctx, "Bind", Config.bindAim, 2, x, y, mouseX, mouseY); y += 20;
@@ -68,23 +61,21 @@ public class ClickGUI extends Screen {
             drawSlider(ctx, "Yaw Speed", (float)Config.aimYawSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Pitch Speed", (float)Config.aimPitchSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "FOV", (float)Config.aimFov, 30f, 180f, x, y, mouseX, mouseY); y += 20;
-
         } else if (category == 1) {
             ctx.drawText(this.textRenderer, "§7ESP", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.espEnabled, x, y, mouseX, mouseY); y += 20;
             drawBind(ctx, "Bind", Config.bindEsp, 3, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Players", Config.espPlayers, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Mobs", Config.espMobs, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Invisible", Config.espInvisible, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Fill Box", Config.espFill, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Outline", Config.espOutline, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Thickness", Config.espLineThickness, 0.5f, 5f, x, y, mouseX, mouseY); y += 20;
         }
-
         ctx.disableScissor();
 
-        // Футер (ссылка)
         ctx.drawText(this.textRenderer, "https://t.me/BogEmptyy", panelX + 10, panelY + 285, 0xFF8888FF, false);
 
-        // Окно бинда
         if (activeBind != 0) {
             ctx.fill(panelX, panelY, panelX + 450, panelY + 300, 0xC0000000);
             ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу или кнопку мыши...", this.width / 2, this.height / 2, 0xFFFFFFFF);
@@ -97,7 +88,7 @@ public class ClickGUI extends Screen {
         boolean hov = mx >= x && mx <= x + 90 && my >= y && my <= y + 20;
         if (act) ctx.fill(x, y, x + 90, y + 20, BG_CAT_ACTIVE);
         else if (hov) ctx.fill(x, y, x + 90, y + 20, 0xFF222222);
-        if (act) ctx.fill(x, y, x + 2, y + 20, ACCENT); // Полоска слева
+        if (act) ctx.fill(x, y, x + 2, y + 20, ACCENT);
         ctx.drawText(this.textRenderer, name, x + 10, y + 6, act ? 0xFFFFFFFF : TEXT_DIM, false);
     }
 
@@ -184,14 +175,15 @@ public class ClickGUI extends Screen {
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 5; updateSlider(mx); return true; } y += 20;
-
         } else if (category == 1) {
             y += 15;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.espEnabled = !Config.espEnabled; return true; } y += 20;
             if (hit(mx, my, x, y, 260, 15)) { activeBind = 3; return true; } y += 20;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.espPlayers = !Config.espPlayers; return true; } y += 20;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.espMobs = !Config.espMobs; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espInvisible = !Config.espInvisible; return true; } y += 20;
             if (hit(mx, my, x+250, y, 25, 12)) { Config.espFill = !Config.espFill; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espOutline = !Config.espOutline; return true; } y += 20;
             if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 6; updateSlider(mx); return true; }
         }
         return super.mouseClicked(mx, my, button);
