@@ -16,3 +16,4 @@
     "java": ">=21"
   }
 }
+"mixins": ["bogempty.mixins.json"],
