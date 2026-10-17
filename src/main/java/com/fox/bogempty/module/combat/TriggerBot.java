@@ -1,7 +1,6 @@
 package com.fox.bogempty.module.combat;
 
 import com.fox.bogempty.config.Config;
-import com.fox.bogempty.utils.CritChecks;
 import net.minecraft.block.BlockState;
 import net.minecraft.block.PlantBlock;
 import net.minecraft.client.MinecraftClient;
@@ -29,7 +28,8 @@ public class TriggerBot {
         if (!Config.triggerEnabled || mc.player == null || mc.world == null || mc.currentScreen != null) return;
         ClientPlayerEntity p = mc.player;
 
-        if (p.isUsingItem() || mc.interactionManager.isBreakingBlock()) return;
+        if (p.isUsingItem()) return;
+        if (mc.interactionManager.isBreakingBlock()) return;
 
         if (cooldown > 0) { cooldown--; return; }
 
@@ -39,36 +39,25 @@ public class TriggerBot {
         double dist = p.squaredDistanceTo(target);
         if (dist > Config.triggerRange * Config.triggerRange) return;
 
-        // Кулдаун из сурсов
         float cdProgress = p.getAttackCooldownProgress(1.0f);
-        if (Config.trigCustomCooldown) {
-            if (cdProgress < (Config.trigCustomCooldownValue / 100f)) return;
-        } else {
-            if (cdProgress < 1.0f) return;
-        }
+        if (cdProgress < 1.0f) return;
 
-        // Логика "Умные криты" / "Только криты"
+        // "Только криты" / "Умные"
         if (Config.triggerMode.equals("Smart") || Config.triggerMode.equals("OnlyCrits")) {
-            boolean isCrit = CritChecks.isCrit(p);
-            if (!isCrit) return;
+            Vec3d vel = p.getVelocity();
+            boolean isFalling = !p.isOnGround() && vel.y < 0.0 && p.fallDistance > 0.0;
+            if (!isFalling) return;
 
-            // "Не бить свипами"
-            if (Config.trigNoSweaps && CritChecks.isAboutToLand(p)) return;
+            if (Config.trigNoSweaps && p.fallDistance < 0.2) return;
 
-            // Сброс спринта
-            if (Config.triggerSprintReset && p.isSprinting()) {
+            if (p.isSprinting()) {
                 p.setSprinting(false);
                 cooldown = 1;
                 return;
             }
-
-            attack(mc, p, target);
-        } else {
-            attack(mc, p, target);
         }
-    }
 
-    private void attack(MinecraftClient mc, ClientPlayerEntity p, Entity target) {
+        // Бьем!
         mc.interactionManager.attackEntity(p, target);
         p.swingHand(Hand.MAIN_HAND);
         cooldown = 1 + RNG.nextInt(2);
@@ -86,7 +75,6 @@ public class TriggerBot {
         Vec3d end = eye.add(look.multiply(Config.triggerRange));
         Box search = p.getBoundingBox().stretch(look.multiply(Config.triggerRange)).expand(1.0);
 
-        // Через траву
         BlockHitResult blockHit = mc.world.raycast(new RaycastContext(eye, end, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, p));
         boolean isPlant = false;
         double blockDist = Double.MAX_VALUE;
@@ -114,12 +102,8 @@ public class TriggerBot {
 
     private static boolean isValid(LivingEntity e, ClientPlayerEntity p) {
         if (e == p || !e.isAlive() || e.isSpectator() || !e.canHit()) return false;
-        
         if (Config.triggerTargets.equals("Players") && !(e instanceof PlayerEntity)) return false;
         if (Config.triggerTargets.equals("Mobs") && !(e instanceof MobEntity)) return false;
-        
-        if (e.isInvisible() && !Config.espInvisible) return false;
-
         return true;
     }
 }
