@@ -3,17 +3,15 @@ package com.fox.bogempty.gui;
 import com.fox.bogempty.config.Config;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
 public class ClickGUI extends Screen {
     private int panelX = 50, panelY = 50;
     private int dragX = -1, dragY = -1;
-    private int category = 0; // 0=Combat, 1=Render, 2=Client, 3=Config
+    private int category = 0;
     private double scrollY = 0;
     private int activeSlider = 0;
-    private int activeBind = 0;
 
     private final int ACCENT = 0xFF9D4EDD;
     private final int BG_PANEL = 0xFF161616;
@@ -25,22 +23,17 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        ctx.fill(0, 0, this.width, this.height, 0x80000000); // Блюр/Затемнение
+        ctx.fill(0, 0, this.width, this.height, 0x80000000);
         ctx.fill(panelX - 1, panelY - 1, panelX + 450 + 1, panelY + 300 + 1, ACCENT); 
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL); 
-        ctx.fill(panelX, panelY, panelX + 120, panelY + 300, BG_CAT); // Левая панель
+        ctx.fill(panelX, panelY, panelX + 120, panelY + 300, BG_CAT);
 
-        // Логотип и версия
         ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 15, ACCENT, true);
         ctx.drawText(this.textRenderer, "v1.0", panelX + 15, panelY + 30, 0xFF888888, false);
 
-        // Категории
         drawCat(ctx, "Combat", 0, panelX + 5, panelY + 60, mouseX, mouseY);
         drawCat(ctx, "Render", 1, panelX + 5, panelY + 90, mouseX, mouseY);
-        drawCat(ctx, "Client", 2, panelX + 5, panelY + 120, mouseX, mouseY);
-        drawCat(ctx, "Config", 3, panelX + 5, panelY + 150, mouseX, mouseY);
 
-        // Контент
         int y = panelY + 20 + (int) scrollY;
         int x = panelX + 135;
 
@@ -68,12 +61,8 @@ public class ClickGUI extends Screen {
             ctx.drawText(this.textRenderer, "§7── Visuals ──", x, y, ACCENT, false); y += 20;
             drawToggle(ctx, "Watermark", Config.watermarkEnabled, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Blur Menu", Config.blurEnabled, x, y, mouseX, mouseY); y += 20;
-        } else if (category == 3) {
-            ctx.drawText(this.textRenderer, "§7── Config ──", x, y, ACCENT, false); y += 20;
-            ctx.drawText(this.textRenderer, "GUI Bind: §d[" + getKeyName(Config.bindGui) + "]", x, y, 0xFFFFFFFF, false); y += 20;
         }
 
-        // Футер
         ctx.drawText(this.textRenderer, "https://t.me/BogEmptyy", panelX + 15, panelY + 285, 0xFF8888FF, false);
     }
 
@@ -103,10 +92,6 @@ public class ClickGUI extends Screen {
         ctx.drawText(this.textRenderer, String.format("%.1f", val), barX + barW + 5, y, ACCENT, false);
     }
 
-    private String getKeyName(int key) {
-        return key == -1 ? "NONE" : InputUtil.fromKeyCode(key, 0).getLocalizedText().getString();
-    }
-
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (mx >= panelX && mx <= panelX + 450 && my >= panelY && my <= panelY + 40) {
@@ -115,32 +100,34 @@ public class ClickGUI extends Screen {
         if (mx >= panelX + 5 && mx <= panelX + 115) {
             if (my >= panelY + 60 && my <= panelY + 80) { category = 0; return true; }
             if (my >= panelY + 90 && my <= panelY + 110) { category = 1; return true; }
-            if (my >= panelY + 120 && my <= panelY + 140) { category = 2; return true; }
-            if (my >= panelY + 150 && my <= panelY + 170) { category = 3; return true; }
         }
 
         int y = panelY + 20 + (int) scrollY;
         int x = panelX + 135;
 
         if (category == 0) {
-            y += 20; // Toggle Trigger
-            if (hit(mx, my, x, y, 220, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20; // Slider Range
-            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 1; updateSlider(mx); return true; } y += 20; // Toggle Crits
-            if (hit(mx, my, x, y, 220, 12)) { Config.triggerOnlyCrits = !Config.triggerOnlyCrits; return true; } y += 20; // Toggle Smart
-            if (hit(mx, my, x, y, 220, 12)) { Config.triggerSmartCrits = !Config.triggerSmartCrits; return true; } y += 20; // Toggle Sprint
+            y += 20;
+            if (hit(mx, my, x, y, 220, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20; 
+            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 1; updateSlider(mx); return true; } y += 20; 
+            if (hit(mx, my, x, y, 220, 12)) { Config.triggerOnlyCrits = !Config.triggerOnlyCrits; return true; } y += 20; 
+            if (hit(mx, my, x, y, 220, 12)) { Config.triggerSmartCrits = !Config.triggerSmartCrits; return true; } y += 20; 
             if (hit(mx, my, x, y, 220, 12)) { Config.triggerSprintReset = !Config.triggerSprintReset; return true; } y += 30;
             
-            y += 20; // Toggle Aim
-            if (hit(mx, my, x, y, 220, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20; // Slider Dist
-            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 2; updateSlider(mx); return true; } y += 20; // Slider Yaw
-            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20; // Slider Pitch
-            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20; // Slider FOV
+            y += 20; 
+            if (hit(mx, my, x, y, 220, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20; 
+            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 2; updateSlider(mx); return true; } y += 20; 
+            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20; 
+            if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20; 
             if (hit(mx, my, x+120, y, 100, 12)) { activeSlider = 5; updateSlider(mx); return true; } y += 30;
             
-            y += 20; // Toggle Players
-            if (hit(mx, my, x, y, 220, 12)) { Config.targetPlayers = !Config.targetPlayers; return true; } y += 20; // Toggle Mobs
-            if (hit(mx, my, x, y, 220, 12)) { Config.targetMobs = !Config.targetMobs; return true; } y += 20; // Toggle Animals
+            y += 20;
+            if (hit(mx, my, x, y, 220, 12)) { Config.targetPlayers = !Config.targetPlayers; return true; } y += 20; 
+            if (hit(mx, my, x, y, 220, 12)) { Config.targetMobs = !Config.targetMobs; return true; } y += 20; 
             if (hit(mx, my, x, y, 220, 12)) { Config.targetAnimals = !Config.targetAnimals; return true; }
+        } else if (category == 1) {
+            y += 20;
+            if (hit(mx, my, x, y, 220, 12)) { Config.watermarkEnabled = !Config.watermarkEnabled; return true; } y += 20;
+            if (hit(mx, my, x, y, 220, 12)) { Config.blurEnabled = !Config.blurEnabled; return true; } y += 20;
         }
         return super.mouseClicked(mx, my, button);
     }
