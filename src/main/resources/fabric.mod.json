@@ -6,7 +6,6 @@
   "description": "BogEmpty Client",
   "authors": ["Fox"],
   "environment": "client",
-  "accessWidener": "bogempty.accesswidener",
   "entrypoints": {
     "client": ["com.fox.bogempty.BogEmpty"]
   },
