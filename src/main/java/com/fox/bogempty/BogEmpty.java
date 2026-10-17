@@ -13,6 +13,7 @@ import com.fox.bogempty.module.render.Fullbright;
 import com.fox.bogempty.module.render.NoHurtCam;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
 import net.minecraft.client.MinecraftClient;
 import org.lwjgl.glfw.GLFW;
@@ -23,56 +24,50 @@ import java.util.List;
 public class BogEmpty implements ClientModInitializer {
     public static final List<Module> modules = new ArrayList<>();
     private static boolean guiKeyWasDown = false;
-    public static int bindGui = 344; // Right Shift
+    public static int bindGui = 344;
 
     @Override
     public void onInitializeClient() {
         Config.load();
         
-        // === РЕГИСТРАЦИЯ ВСЕХ МОДУЛЕЙ ===
-        // Combat
+        // Регистрация модулей
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
-        
-        // Render
         modules.add(new ESPModule());
         modules.add(new Fullbright());
         modules.add(new NoHurtCam());
-        
-        // Player
         modules.add(new FastPlace());
         modules.add(new InventoryMove());
-        
-        // Misc
         modules.add(new AutoTotem());
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
-            // Открытие/закрытие меню
             if (down && !guiKeyWasDown) {
-                if (mc.currentScreen == null) {
-                    mc.setScreen(new ClickGUI());
-                } else if (mc.currentScreen instanceof ClickGUI) {
-                    mc.setScreen(null);
-                }
+                if (mc.currentScreen == null) mc.setScreen(new ClickGUI());
+                else if (mc.currentScreen instanceof ClickGUI) mc.setScreen(null);
             }
             guiKeyWasDown = down;
 
-            // Тик всех включенных модулей
             for (Module m : modules) {
-                if (m.isEnabled()) {
-                    m.onTick();
-                }
+                if (m.isEnabled()) m.onTick();
             }
         });
 
-        // Рендер ESP
+        // 3D Рендер (если понадобится, например, боксы)
         WorldRenderEvents.LAST.register(ctx -> {
+            // Тут пока пусто, так как стрелки мы перенесли в HUD
+        });
+
+        // HUD Рендер (Стрелки / Радар)
+        HudRenderCallback.EVENT.register((ctx, tickDelta) -> {
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc.player == null || mc.currentScreen instanceof ClickGUI) return;
+
             for (Module m : modules) {
                 if (m instanceof ESPModule esp && esp.isEnabled()) {
-                    esp.onRender(ctx.matrixStack(), ctx.camera(), ctx.tickCounter().getTickDelta(true));
+                    esp.onRender2D(ctx, tickDelta);
                 }
             }
         });
