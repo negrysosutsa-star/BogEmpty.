@@ -20,13 +20,16 @@ public class ClickGUI extends Screen {
     private Setting activeSlider = null;
     private Module activeBind = null;
 
-    private final int BG_PANEL = 0xFF121212;
-    private final int BG_HEADER = 0xFF1A1A1A;
-    private final int BG_CAT = 0xFF151515;
-    private final int BG_ACTIVE = 0xFF2A2A2A;
+    // Палитра (Premium Dark)
+    private final int BG_PANEL = 0xFF0A0A0A;
+    private final int BG_SIDEBAR = 0xFF111111;
+    private final int BG_HEADER = 0xFF151515;
+    private final int BG_ACTIVE = 0xFF1E1E1E;
     private final int ACCENT = 0xFF9D4EDD;
-    private final int TEXT = 0xFFCCCCCC;
-    private final int TEXT_DIM = 0xFF777777;
+    private final int ACCENT_LIGHT = 0xFFC77DFF;
+    private final int TEXT = 0xFFEEEEEE;
+    private final int TEXT_DIM = 0xFF888888;
+    private final int TOGGLE_OFF = 0xFF2A2A2A;
 
     public ClickGUI() {
         super(Text.literal("BogEmpty"));
@@ -36,34 +39,33 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Имитация размытия (просто сильное затемнение)
-        if (Config.blurEnabled) {
-            ctx.fill(0, 0, this.width, this.height, 0xB0000000);
-        } else {
-            ctx.fill(0, 0, this.width, this.height, 0x50000000);
-        }
+        // 1. Затемнение фона
+        ctx.fill(0, 0, this.width, this.height, 0xB0000000);
 
-        // Тень
-        ctx.fill(panelX - 3, panelY - 3, panelX + 450 + 3, panelY + 300 + 3, 0x40000000);
+        // 2. Тень (многослойная)
+        ctx.fill(panelX - 5, panelY - 5, panelX + 450 + 5, panelY + 320 + 5, 0x15000000);
+        ctx.fill(panelX - 3, panelY - 3, panelX + 450 + 3, panelY + 320 + 3, 0x30000000);
         
-        // Панель
-        ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL);
-        ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER);
-        ctx.fill(panelX, panelY + 25, panelX + 450, panelY + 26, ACCENT);
+        // 3. Градиентный фон панели
+        ctx.fillGradient(panelX, panelY, panelX + 450, panelY + 320, BG_PANEL, 0xFF050505);
+        
+        // 4. Шапка
+        ctx.fillGradient(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER, 0xFF0A0A0A);
+        ctx.fill(panelX, panelY + 25, panelX + 450, panelY + 26, ACCENT); 
 
-        ctx.drawText(this.textRenderer, "BogEmpty", panelX + 10, panelY + 8, ACCENT, true);
-        ctx.drawText(this.textRenderer, "v1.0", panelX + 420, panelY + 8, TEXT_DIM, false);
+        ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 10, panelY + 8, ACCENT, true);
+        ctx.drawText(this.textRenderer, "§8v1.0", panelX + 420, panelY + 8, TEXT_DIM, false);
 
-        // Категории
-        ctx.fill(panelX, panelY + 26, panelX + 100, panelY + 300, BG_CAT);
+        // 5. Сайдбар
+        ctx.fill(panelX, panelY + 26, panelX + 100, panelY + 320, BG_SIDEBAR);
         int catY = panelY + 36;
         for (Category cat : Category.values()) {
             drawCategory(ctx, cat, panelX + 5, catY, mouseX, mouseY);
             catY += 25;
         }
 
-        // Модули
-        ctx.enableScissor(panelX + 100, panelY + 26, panelX + 450, panelY + 300);
+        // 6. Модули
+        ctx.enableScissor(panelX + 100, panelY + 26, panelX + 450, panelY + 320);
         int y = panelY + 36 + (int) scrollY;
         int x = panelX + 110;
 
@@ -71,9 +73,13 @@ public class ClickGUI extends Screen {
             if (m.getCategory() != currentCategory) continue;
 
             drawModule(ctx, m, x, y, mouseX, mouseY);
-            y += 20;
+            y += 24; // Чуть больше отступ
 
             if (m.isEnabled()) {
+                // Рисуем фон под настройками
+                int settingsHeight = (m.getSettings().size() * 18) + 5;
+                ctx.fill(x, y - 4, x + 330, y - 4 + settingsHeight, 0x15FFFFFF);
+                
                 for (Setting s : m.getSettings()) {
                     drawSetting(ctx, s, x + 10, y, mouseX, mouseY);
                     y += 18;
@@ -83,9 +89,11 @@ public class ClickGUI extends Screen {
         }
         ctx.disableScissor();
 
+        // Окно бинда
         if (activeBind != null) {
-            ctx.fill(panelX, panelY, panelX + 450, panelY + 300, 0xD0000000);
-            ctx.drawCenteredTextWithShadow(this.textRenderer, "Нажми клавишу для " + activeBind.getName(), this.width / 2, this.height / 2, 0xFFFFFFFF);
+            ctx.fill(panelX, panelY, panelX + 450, panelY + 320, 0xE0000000);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу для §f" + activeBind.getName(), this.width / 2, this.height / 2, 0xFFFFFFFF);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, "§7Esc — отмена", this.width / 2, this.height / 2 + 15, TEXT_DIM);
         }
     }
 
@@ -95,43 +103,71 @@ public class ClickGUI extends Screen {
         
         if (act) {
             ctx.fill(x, y, x + 90, y + 20, BG_ACTIVE);
-            ctx.fill(x, y, x + 2, y + 20, ACCENT);
+            ctx.fill(x, y, x + 2, y + 20, ACCENT); // Полоска
         } else if (hov) {
-            ctx.fill(x, y, x + 90, y + 20, 0xFF222222);
+            ctx.fill(x, y, x + 90, y + 20, 0x10FFFFFF); // Легкая подсветка
         }
-        ctx.drawText(this.textRenderer, cat.name, x + 10, y + 6, act ? 0xFFFFFFFF : TEXT_DIM, false);
+        ctx.drawText(this.textRenderer, cat.name, x + 12, y + 6, act ? 0xFFFFFFFF : TEXT_DIM, false);
     }
 
     private void drawModule(DrawContext ctx, Module m, int x, int y, int mx, int my) {
-        boolean hov = mx >= x && mx <= x + 320 && my >= y && my <= y + 15;
+        boolean hov = mx >= x && mx <= x + 330 && my >= y && my <= y + 18;
         
-        ctx.fill(x, y + 2, x + 10, y + 12, m.isEnabled() ? ACCENT : 0xFF333333);
-        ctx.drawText(this.textRenderer, m.getName(), x + 15, y + 3, m.isEnabled() ? ACCENT : (hov ? 0xFFFFFF : TEXT), false);
+        // Подсветка модуля при наведении
+        if (hov) ctx.fill(x - 2, y - 2, x + 332, y + 18, 0x10FFFFFF);
+
+        // Pill-переключатель
+        int pillX = x + 300;
+        int pillW = 24, pillH = 12;
+        int pillColor = m.isEnabled() ? ACCENT : TOGGLE_OFF;
+        ctx.fill(pillX, y + 2, pillX + pillW, y + 2 + pillH, pillColor);
         
-        String keyName = m.getKey() == -1 ? "BIND" : InputUtil.fromKeyCode(m.getKey(), 0).getLocalizedText().getString();
-        ctx.drawText(this.textRenderer, "[" + keyName + "]", x + 280, y + 3, TEXT_DIM, false);
+        // Кружок
+        int circleX = m.isEnabled() ? pillX + pillW - 11 : pillX + 1;
+        ctx.fill(circleX, y + 3, circleX + 10, y + 13, 0xFFFFFFFF);
+
+        // Имя
+        int textColor = m.isEnabled() ? ACCENT_LIGHT : (hov ? 0xFFFFFF : TEXT);
+        ctx.drawText(this.textRenderer, m.getName(), x + 5, y + 4, textColor, false);
+        
+        // Бинд
+        String keyName = m.getKey() == -1 ? "NONE" : InputUtil.fromKeyCode(m.getKey(), 0).getLocalizedText().getString();
+        ctx.drawText(this.textRenderer, "§8[§d" + keyName + "§8]", x + 240, y + 4, TEXT_DIM, false);
     }
 
     private void drawSetting(DrawContext ctx, Setting s, int x, int y, int mx, int my) {
         if (s.getType() == Setting.Type.BOOLEAN) {
-            boolean hov = mx >= x && mx <= x + 250 && my >= y && my <= y + 15;
-            ctx.fill(x, y + 2, x + 8, y + 10, s.getBool() ? ACCENT : 0xFF333333);
-            ctx.drawText(this.textRenderer, s.getName(), x + 12, y + 2, hov ? 0xFFFFFF : TEXT_DIM, false);
+            boolean hov = mx >= x && mx <= x + 300 && my >= y && my <= y + 15;
+            
+            // Мини-переключатель
+            int pillX = x + 260;
+            int pillColor = s.getBool() ? ACCENT : TOGGLE_OFF;
+            ctx.fill(pillX, y + 3, pillX + 16, y + 11, pillColor);
+            int circleX = s.getBool() ? pillX + 9 : pillX + 1;
+            ctx.fill(circleX, y + 3, circleX + 7, y + 11, 0xFFFFFFFF);
+
+            ctx.drawText(this.textRenderer, s.getName(), x, y + 3, hov ? 0xFFFFFF : TEXT_DIM, false);
         } 
         else if (s.getType() == Setting.Type.ENUM) {
-            boolean hov = mx >= x && mx <= x + 250 && my >= y && my <= y + 15;
-            ctx.drawText(this.textRenderer, s.getName() + ": §b" + s.getEnum(), x, y + 2, hov ? 0xFFFFFF : TEXT_DIM, false);
+            boolean hov = mx >= x && mx <= x + 300 && my >= y && my <= y + 15;
+            ctx.drawText(this.textRenderer, s.getName() + ": §d" + s.getEnum(), x, y + 3, hov ? 0xFFFFFF : TEXT_DIM, false);
         } 
         else if (s.getType() == Setting.Type.SLIDER) {
-            int barX = x + 130, barW = 120;
+            int barX = x + 130, barW = 130;
             float pct = (s.getFloat() - s.getMin()) / (s.getMax() - s.getMin());
             boolean hov = mx >= barX && mx <= barX + barW && my >= y && my <= y + 15;
             
-            ctx.drawText(this.textRenderer, s.getName(), x, y + 2, TEXT_DIM, false);
-            ctx.fill(barX, y + 4, barX + barW, y + 8, 0xFF2A2A2A);
-            ctx.fill(barX, y + 4, barX + (int)(barW * pct), y + 8, hov ? 0xFFD18CFF : ACCENT);
-            ctx.fill(barX + (int)(barW * pct) - 2, y + 1, barX + (int)(barW * pct) + 2, y + 11, 0xFFFFFFFF);
-            ctx.drawText(this.textRenderer, String.format("%.1f", s.getFloat()), barX + barW + 5, y + 2, TEXT_DIM, false);
+            ctx.drawText(this.textRenderer, s.getName(), x, y + 3, TEXT_DIM, false);
+            
+            // Трек
+            ctx.fill(barX, y + 5, barX + barW, y + 9, 0xFF1A1A1A);
+            // Заполнение
+            ctx.fill(barX, y + 5, barX + (int)(barW * pct), y + 9, hov ? ACCENT_LIGHT : ACCENT);
+            // Кружок
+            ctx.fill(barX + (int)(barW * pct) - 2, y + 2, barX + (int)(barW * pct) + 2, y + 12, 0xFFFFFFFF);
+            
+            // Значение
+            ctx.drawText(this.textRenderer, String.format("%.1f", s.getFloat()), barX + barW + 10, y + 3, TEXT_DIM, false);
         }
     }
 
@@ -163,32 +199,32 @@ public class ClickGUI extends Screen {
         for (Module m : BogEmpty.modules) {
             if (m.getCategory() != currentCategory) continue;
 
-            if (mx >= x && mx <= x + 280 && my >= y && my <= y + 15) {
-                m.toggle();
+            if (mx >= x && mx <= x + 330 && my >= y && my <= y + 18) {
+                if (mx >= x + 240 && mx <= x + 290) {
+                    activeBind = m;
+                } else {
+                    m.toggle();
+                }
                 return true;
             }
-            if (mx >= x + 280 && mx <= x + 320 && my >= y && my <= y + 15) {
-                activeBind = m;
-                return true;
-            }
-            y += 20;
+            y += 24;
 
             if (m.isEnabled()) {
                 for (Setting s : m.getSettings()) {
                     if (s.getType() == Setting.Type.BOOLEAN) {
-                        if (mx >= x + 10 && mx <= x + 250 && my >= y && my <= y + 15) {
+                        if (mx >= x + 10 && mx <= x + 300 && my >= y && my <= y + 15) {
                             s.setBool(!s.getBool());
                             return true;
                         }
                     } 
                     else if (s.getType() == Setting.Type.ENUM) {
-                        if (mx >= x + 10 && mx <= x + 250 && my >= y && my <= y + 15) {
+                        if (mx >= x + 10 && mx <= x + 300 && my >= y && my <= y + 15) {
                             s.cycleEnum();
                             return true;
                         }
                     } 
                     else if (s.getType() == Setting.Type.SLIDER) {
-                        if (mx >= x + 10 + 130 && mx <= x + 10 + 250 && my >= y && my <= y + 15) {
+                        if (mx >= x + 10 + 130 && mx <= x + 10 + 260 && my >= y && my <= y + 15) {
                             activeSlider = s;
                             updateSlider(s, mx, x + 10);
                             return true;
@@ -215,7 +251,7 @@ public class ClickGUI extends Screen {
     }
 
     private void updateSlider(Setting s, double mx, int xOffset) {
-        float pct = (float)((mx - (xOffset + 130)) / 120.0);
+        float pct = (float)((mx - (xOffset + 130)) / 130.0);
         pct = Math.max(0f, Math.min(1f, pct));
         s.setFloat(s.getMin() + pct * (s.getMax() - s.getMin()));
     }
