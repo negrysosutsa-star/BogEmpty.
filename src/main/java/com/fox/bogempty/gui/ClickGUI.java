@@ -5,10 +5,12 @@ import com.fox.bogempty.config.Config;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class ClickGUI extends Screen {
@@ -24,33 +26,41 @@ public class ClickGUI extends Screen {
     private final int BG_HEADER = 0xFF1A1A1A;
     private final int BG_CAT = 0xFF151515;
     private final int BG_ACTIVE = 0xFF2A2A2A;
-    private final int ACCENT = 0xFF9D4EDD;
+    private final int ACCENT = 0xFF9D4EDD; // Фиолетовый
     private final int TEXT = 0xFFCCCCCC;
     private final int TEXT_DIM = 0xFF777777;
 
     public ClickGUI() {
         super(Text.literal("BogEmpty"));
-        // Загружаем позицию из конфига
+        // Загружаем позицию
         this.panelX = Config.guiX;
         this.panelY = Config.guiY;
     }
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Блюр / Затемнение фона
+        // === БЛЮР ===
         if (Config.blurEnabled) {
-            ctx.fill(0, 0, this.width, this.height, 0x90000000);
-        } else {
-            ctx.fill(0, 0, this.width, this.height, 0x50000000);
+            try {
+                MinecraftClient mc = MinecraftClient.getInstance();
+                Identifier blurId = Identifier.of("bogempty", "shaders/post/blur.json");
+                if (mc.getResourceManager().getResource(blurId).isPresent()) {
+                    mc.gameRenderer.loadPostProcessor(blurId);
+                }
+            } catch (Exception ignored) {}
         }
+
+        // Затемнение
+        ctx.fill(0, 0, this.width, this.height, 0x90000000);
 
         // Тень
         ctx.fill(panelX - 3, panelY - 3, panelX + 450 + 3, panelY + 300 + 3, 0x40000000);
         
+        // Панель
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL);
         ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER);
         
-        // Акцентная полоса
+        // Линия акцента
         ctx.fill(panelX, panelY + 25, panelX + 450, panelY + 26, ACCENT);
 
         ctx.drawText(this.textRenderer, "BogEmpty", panelX + 10, panelY + 8, ACCENT, true);
