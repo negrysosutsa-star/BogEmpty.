@@ -1,53 +1,18 @@
-package com.fox.bogempty.config;
+// TRIGGER
+public static boolean triggerEnabled = false;
+public static double triggerRange = 3.0;
+public static String triggerMode = "Smart"; // "Smart" (Умные) или "OnlyCrits" (Только криты)
+public static boolean triggerSmartCrits = true;
+public static boolean triggerOnlyCrits = true;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import net.fabricmc.loader.api.FabricLoader;
+public static boolean trigThroughEntities = false; // Через энтити
+public static boolean trigCustomCooldown = false; // Свой кулдаун
+public static double trigCustomCooldownValue = 80.0; // Процент готовности (80%)
+public static boolean trigTpsSync = false; // Синхронизация с ТПС сервера
+public static boolean trigNoSweaps = false; // Не бить свипами (в конце падения)
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-
-public class Config {
-    public static int bindGui = 344;
-
-    // TRIGGER
-    public static boolean triggerEnabled = false;
-    public static double triggerRange = 3.0;
-    public static boolean triggerOnlyCrits = true;
-    public static boolean triggerSmartCrits = true;
-    public static boolean triggerSprintReset = true;
-
-    // AIM
-    public static boolean aimEnabled = false;
-    public static double aimRange = 3.2;
-    public static double aimYawSpeed = 31.0;
-    public static double aimPitchSpeed = 15.0;
-    public static double aimFov = 51.0;
-
-    // TARGETS
-    public static boolean targetPlayers = true;
-    public static boolean targetMobs = false;
-    public static boolean targetAnimals = false;
-
-    // VISUALS
-    public static boolean watermarkEnabled = true;
-    public static boolean blurEnabled = true;
-
-    private static final Path FILE = FabricLoader.getInstance().getConfigDir().resolve("bogempty.json");
-    private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
-
-    public static Config load() {
-        if (Files.exists(FILE)) {
-            try {
-                Config c = GSON.fromJson(Files.readString(FILE), Config.class);
-                if (c != null) return c;
-            } catch (IOException ignored) {}
-        }
-        return new Config();
-    }
-
-    public static void save() {
-        try { Files.writeString(FILE, GSON.toJson(new Config())); } catch (IOException ignored) {}
-    }
-}
+public static boolean trigOnlyWeapon = false; // Только с оружием
+public static boolean trigThroughGrass = true; // Через траву
+public static boolean trigTargetNaked = false; // Только голых
+public static boolean trigTargetInvisible = false; // Невидимых
+public static boolean trigTargetOnlyArmor = false; // Только в броне
