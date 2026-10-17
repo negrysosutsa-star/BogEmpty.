@@ -7,27 +7,20 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class Config {
     public static int bindGui = 344;
 
-    // --- TRIGGER BOT ---
+    // TRIGGER
     public static boolean triggerEnabled = false;
     public static int bindTrigger = -1;
-    public static String triggerMode = "Smart"; // Smart, OnlyCrits
-    public static String triggerTargets = "Players"; // Players, Mobs, All
-    public static List<String> triggerBit = new ArrayList<>(Arrays.asList("ThroughGrass", "Invisible"));
     public static double triggerRange = 3.0;
-    public static boolean trigThroughEntities = false;
-    public static boolean trigCustomCooldown = false;
-    public static double trigCustomCooldownValue = 80.0;
-    public static boolean trigTpsSync = false;
+    public static String triggerMode = "Smart";
+    public static String triggerTargets = "Players";
     public static boolean trigNoSweaps = false;
+    public static boolean trigCustomCooldown = false;
 
-    // --- AIM ASSIST ---
+    // AIM
     public static boolean aimEnabled = false;
     public static int bindAim = -1;
     public static double aimRange = 3.2;
@@ -35,17 +28,22 @@ public class Config {
     public static double aimPitchSpeed = 15.0;
     public static double aimFov = 51.0;
 
-    // --- ESP (Визуал) ---
+    // ESP
     public static boolean espEnabled = false;
     public static int bindEsp = -1;
     public static boolean espPlayers = true;
     public static boolean espMobs = false;
-    public static boolean espFilterArmor = false;
-    public static boolean espFilterNaked = false;
-    public static boolean espFill = false;
+    public static boolean espInvisible = false;
+    public static boolean espFill = true;
+    public static boolean espOutline = true;
     public static float espLineThickness = 2.0f;
+    public static boolean espScaleByDistance = true;
 
-    // --- HUD ---
+    // COLORS
+    public static int espLineColor = 0xFF9D4EDD;
+    public static int espFillColor = 0x409D4EDD;
+
+    // HUD
     public static boolean watermarkEnabled = true;
     public static boolean blurEnabled = true;
 
