@@ -30,7 +30,6 @@ public class BogEmpty implements ClientModInitializer {
     public void onInitializeClient() {
         Config.load();
         
-        // Регистрация модулей
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
         modules.add(new ESPModule());
@@ -40,38 +39,41 @@ public class BogEmpty implements ClientModInitializer {
         modules.add(new InventoryMove());
         modules.add(new AutoTotem());
 
-        // 1. ЛОГИКА (Тик 20 раз в секунду)
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
             if (down && !guiKeyWasDown) {
-                if (mc.currentScreen == null) {
-                    mc.setScreen(new ClickGUI());
-                } else if (mc.currentScreen instanceof ClickGUI) {
-                    mc.setScreen(null);
-                }
+                if (mc.currentScreen == null) mc.setScreen(new ClickGUI());
+                else if (mc.currentScreen instanceof ClickGUI) mc.setScreen(null);
             }
             guiKeyWasDown = down;
 
             for (Module m : modules) {
-                // Аим обновляется в рендере, тут его пропускаем
                 if (m.isEnabled() && !(m instanceof AimAssist)) {
                     m.onTick();
                 }
             }
         });
 
-        // 2. РЕНДЕР (Каждый фрейм - 60+ раз в секунду)
         WorldRenderEvents.START.register(ctx -> {
             for (Module m : modules) {
                 if (m.isEnabled() && m instanceof AimAssist aim) {
-                    aim.onRender(); // Плавный Аим
+                    aim.onRender();
                 }
             }
         });
 
-        // 3. HUD (Стрелки)
+        // 3D Рендер частиц
+        WorldRenderEvents.LAST.register(ctx -> {
+            for (Module m : modules) {
+                if (m instanceof ESPModule esp && esp.isEnabled()) {
+                    esp.onRender(ctx.matrixStack(), ctx.camera(), ctx.tickCounter().getTickDelta(true));
+                }
+            }
+        });
+
+        // 2D Рендер стрелок
         HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player == null || mc.currentScreen instanceof ClickGUI) return;
