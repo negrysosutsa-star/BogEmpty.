@@ -3,137 +3,115 @@ package com.fox.bogempty.module.render;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gl.ShaderProgramKeys;
-import net.minecraft.client.render.*;
-import net.minecraft.client.util.math.MatrixStack;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
-import org.joml.Matrix4f;
 
 public class ESPModule extends Module {
     private final Setting showPlayers = new Setting("Show Players", true);
     private final Setting showMobs = new Setting("Show Mobs", false);
-    private final Setting fill = new Setting("Fill Box", true);
-    private final Setting arrows = new Setting("Arrows", true);
+    private final Setting radius = new Setting("Radius", 60f, 30f, 150f);
+    private final Setting size = new Setting("Size", 10f, 5f, 25f);
+    private final Setting color = new Setting("Color", "Purple", new String[]{"Purple", "Red", "Green", "Blue"});
 
     public ESPModule() {
         super("ESP", Category.RENDER);
         addSetting(showPlayers);
         addSetting(showMobs);
-        addSetting(fill);
-        addSetting(arrows);
+        addSetting(radius);
+        addSetting(size);
+        addSetting(color);
     }
 
-    public void onRender(MatrixStack matrices, Camera camera, float tickDelta) {
+    // Теперь это HUD-элемент, поэтому мы переопределяем onRender2D (или вызываем из HudRenderCallback)
+    public void onRender2D(DrawContext ctx, float tickDelta) {
         if (!isEnabled()) return;
         MinecraftClient mc = MinecraftClient.getInstance();
-        if (mc.player == null || mc.world == null) return;
+        if (mc.player == null || mc.world == null || mc.currentScreen != null) return;
 
-        Vec3d camPos = camera.getPos();
-
-        RenderSystem.enableBlend();
-        RenderSystem.defaultBlendFunc();
-        RenderSystem.disableCull();
-        RenderSystem.disableDepthTest();
-        RenderSystem.depthMask(false);
-        RenderSystem.setShader(ShaderProgramKeys.POSITION_COLOR);
-
-        int lineColor = 0xFF9D4EDD;
-        int fillColor = 0x409D4EDD;
+        ClientPlayerEntity p = mc.player;
+        int centerX = mc.getWindow().getScaledWidth() / 2;
+        int centerY = mc.getWindow().getScaledHeight() / 2;
+        
+        // Выбираем цвет
+        int drawColor = 0xFF9D4EDD; // Purple по умолчанию
+        if (color.getEnum().equals("Red")) drawColor = 0xFFFF4444;
+        if (color.getEnum().equals("Green")) drawColor = 0xFF44FF44;
+        if (color.getEnum().equals("Blue")) drawColor = 0xFF4444FF;
 
         for (Entity e : mc.world.getEntities()) {
-            if (!(e instanceof LivingEntity le) || le == mc.player || !le.isAlive()) continue;
+            if (!(e instanceof LivingEntity le) || le == p || !le.isAlive()) continue;
             
             boolean isPlayer = le instanceof PlayerEntity;
             boolean isMob = le instanceof MobEntity;
-            
             if (isPlayer && !showPlayers.getBool()) continue;
             if (isMob && !showMobs.getBool()) continue;
             if (!isPlayer && !isMob) continue;
 
-            double x = MathHelper.lerp(tickDelta, le.prevX, le.getX()) - camPos.x;
-            double y = MathHelper.lerp(tickDelta, le.prevY, le.getY()) - camPos.y;
-            double z = MathHelper.lerp(tickDelta, le.prevZ, le.getZ()) - camPos.z;
-
-            Box box = le.getBoundingBox();
-            matrices.push();
-            matrices.translate(x, y, z);
-            Matrix4f m = matrices.peek().getPositionMatrix();
-
-            float w = (float)(box.maxX - box.minX) / 2f;
-            float h = (float)(box.maxY - box.minY);
-
-            drawBox(m, w, h, lineColor, fill.getBool() ? fillColor : 0);
+            // Вычисляем угол между взглядом игрока и целью
+            Vec3d eye = p.getEyePos();
+            Vec3d targetPos = le.getBoundingBox().getCenter();
+            Vec3d diff = targetPos.subtract(eye);
             
-            if (arrows.getBool()) {
-                drawArrow(matrices, w, h, lineColor);
-            }
-            matrices.pop();
-        }
+            // Угол поворота цели относительно игрока (в градусах)
+            double targetYaw = Math.toDegrees(Math.atan2(-diff.x, diff.z));
+            double yawDelta = MathHelper.wrapDegrees(targetYaw - p.getYaw());
 
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
-        RenderSystem.enableCull();
-        RenderSystem.disableBlend();
+            // Если цель сзади, мы её не показываем (или показываем с краю)
+            // Ограничиваем угол от -180 до 180
+            if (Math.abs(yawDelta) > 180) continue;
+
+            // Позиция стрелки на экране (по кругу)
+            double rad = Math.toRadians(yawDelta - 90); // -90 чтобы 0 градусов было вверху
+            double arrowX = centerX + Math.cos(rad) * radius.getFloat();
+            double arrowY = centerY + Math.sin(rad) * radius.getFloat();
+
+            drawArrow(ctx, (int)arrowX, (int)arrowY, yawDelta, drawColor);
+        }
     }
 
-    // Рисуем вращающуюся 3D-стрелку (ромб с хвостом)
-    private void drawArrow(MatrixStack matrices, float w, float h, int color) {
-        float time = (float) (System.currentTimeMillis() % 100000L) / 1000f;
-        float angle = time * 90f; // Скорость вращения
+    // Рисуем треугольник (стрелку) через DrawContext
+    private void drawArrow(DrawContext ctx, int x, int y, double yawDelta, int color) {
+        float s = size.getFloat();
+        
+        // Поворачиваем стрелку в сторону цели
+        double rot = Math.toRadians(yawDelta);
+        
+        int x1 = x + (int)(Math.sin(rot) * s);
+        int y1 = y - (int)(Math.cos(rot) * s);
+        
+        int x2 = x + (int)(Math.sin(rot + 2.5) * s * 0.7);
+        int y2 = y - (int)(Math.cos(rot + 2.5) * s * 0.7);
+        
+        int x3 = x + (int)(Math.sin(rot - 2.5) * s * 0.7);
+        int y3 = y - (int)(Math.cos(rot - 2.5) * s * 0.7);
 
-        matrices.push();
-        // Поднимаем стрелку на уровень головы и отодвигаем от хита
-        matrices.translate(0, h * 0.5, 0);
-        matrices.multiply(RotationAxis.POSITIVE_Y.rotationDegrees(angle));
-        matrices.translate(w + 0.3, 0, 0); // Радиус от игрока
-
-        Matrix4f m = matrices.peek().getPositionMatrix();
-        Tessellator tess = Tessellator.getInstance();
-        BufferBuilder buf = tess.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-
-        // Хвост стрелки
-        buf.vertex(m, 0, 0, 0).color(color); buf.vertex(m, 0.4f, 0, 0).color(color);
-        // Наконечники
-        buf.vertex(m, 0.4f, 0, 0).color(color); buf.vertex(m, 0.2f, 0.2f, 0).color(color);
-        buf.vertex(m, 0.4f, 0, 0).color(color); buf.vertex(m, 0.2f, -0.2f, 0).color(color);
-
-        BufferRenderer.drawWithGlobalProgram(buf.end());
-        matrices.pop();
+        // Заливка треугольника (рисуем линиями, так как в DrawContext нет fillTriangle)
+        drawLine(ctx, x1, y1, x2, y2, color);
+        drawLine(ctx, x2, y2, x3, y3, color);
+        drawLine(ctx, x3, y3, x1, y1, color);
     }
 
-    private void drawBox(Matrix4f m, float w, float h, int lineColor, int fillColor) {
-        Tessellator tess = Tessellator.getInstance();
-        if (fillColor != 0) {
-            BufferBuilder bufFill = tess.begin(VertexFormat.DrawMode.QUADS, VertexFormats.POSITION_COLOR);
-            bufFill.vertex(m, -w, 0, -w).color(fillColor); bufFill.vertex(m, w, 0, -w).color(fillColor); bufFill.vertex(m, w, h, -w).color(fillColor); bufFill.vertex(m, -w, h, -w).color(fillColor);
-            bufFill.vertex(m, -w, 0, w).color(fillColor); bufFill.vertex(m, -w, h, w).color(fillColor); bufFill.vertex(m, w, h, w).color(fillColor); bufFill.vertex(m, w, 0, w).color(fillColor);
-            bufFill.vertex(m, -w, 0, -w).color(fillColor); bufFill.vertex(m, -w, h, -w).color(fillColor); bufFill.vertex(m, -w, h, w).color(fillColor); bufFill.vertex(m, -w, 0, w).color(fillColor);
-            bufFill.vertex(m, w, 0, -w).color(fillColor); bufFill.vertex(m, w, 0, w).color(fillColor); bufFill.vertex(m, w, h, w).color(fillColor); bufFill.vertex(m, w, h, -w).color(fillColor);
-            BufferRenderer.drawWithGlobalProgram(bufFill.end());
-        }
+    // Простая отрисовка линии
+    private void drawLine(DrawContext ctx, int x1, int y1, int x2, int y2, int color) {
+        int dx = Math.abs(x2 - x1);
+        int dy = Math.abs(y2 - y1);
+        int sx = x1 < x2 ? 1 : -1;
+        int sy = y1 < y2 ? 1 : -1;
+        int err = dx - dy;
 
-        BufferBuilder bufLines = tess.begin(VertexFormat.DrawMode.DEBUG_LINES, VertexFormats.POSITION_COLOR);
-        bufLines.vertex(m, -w, 0, -w).color(lineColor); bufLines.vertex(m, w, 0, -w).color(lineColor);
-        bufLines.vertex(m, w, 0, -w).color(lineColor); bufLines.vertex(m, w, 0, w).color(lineColor);
-        bufLines.vertex(m, w, 0, w).color(lineColor); bufLines.vertex(m, -w, 0, w).color(lineColor);
-        bufLines.vertex(m, -w, 0, w).color(lineColor); bufLines.vertex(m, -w, 0, -w).color(lineColor);
-        bufLines.vertex(m, -w, h, -w).color(lineColor); bufLines.vertex(m, w, h, -w).color(lineColor);
-        bufLines.vertex(m, w, h, -w).color(lineColor); bufLines.vertex(m, w, h, w).color(lineColor);
-        bufLines.vertex(m, w, h, w).color(lineColor); bufLines.vertex(m, -w, h, w).color(lineColor);
-        bufLines.vertex(m, -w, h, w).color(lineColor); bufLines.vertex(m, -w, h, -w).color(lineColor);
-        bufLines.vertex(m, -w, 0, -w).color(lineColor); bufLines.vertex(m, -w, h, -w).color(lineColor);
-        bufLines.vertex(m, w, 0, -w).color(lineColor); bufLines.vertex(m, w, h, -w).color(lineColor);
-        bufLines.vertex(m, w, 0, w).color(lineColor); bufLines.vertex(m, w, h, w).color(lineColor);
-        bufLines.vertex(m, -w, 0, w).color(lineColor); bufLines.vertex(m, -w, h, w).color(lineColor);
-        BufferRenderer.drawWithGlobalProgram(bufLines.end());
+        while (true) {
+            ctx.fill(x1, y1, x1 + 1, y1 + 1, color); // Рисуем пиксель
+            if (x1 == x2 && y1 == y2) break;
+            int e2 = 2 * err;
+            if (e2 > -dy) { err -= dy; x1 += sx; }
+            if (e2 < dx) { err += dx; y1 += sy; }
+        }
     }
 }
