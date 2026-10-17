@@ -3,18 +3,9 @@ package com.fox.bogempty.utils;
 import net.minecraft.entity.Entity;
 import net.minecraft.util.math.MathHelper;
 import java.security.SecureRandom;
-import java.util.Random;
 
 public class LegitAim extends AimMode {
     private final SecureRandom secureRandom = new SecureRandom();
-    private final Random random = new Random();
-    
-    // Настройки (для теста захардкодим, потом вынесем в меню)
-    private float speed = 1.0f;
-    private float smooth = 1.0f;
-    private double minLerp = 0.05;
-    private double maxLerp = 1.5;
-
     private int value = 0;
     private double value2 = 0.0;
     private long time = System.currentTimeMillis();
@@ -30,10 +21,6 @@ public class LegitAim extends AimMode {
 
     @Override
     public void update() {
-        this.update4();
-    }
-
-    private void update4() {
         this.value = 0;
         this.value2 = 0.0;
         this.time = System.currentTimeMillis();
@@ -43,7 +30,6 @@ public class LegitAim extends AimMode {
         java.util.Arrays.fill(this.floatArray, 0.0F);
     }
 
-    // Плавная скорость (Sine-wave)
     private float getFloatByFloat2(float angleDist) {
         long i = System.currentTimeMillis() - this.time3;
         float f1 = switch (this.value) {
@@ -82,18 +68,18 @@ public class LegitAim extends AimMode {
         return i > 0 ? f / i : (this.value4 > 0.0F ? this.value4 : 1.0F);
     }
 
-    // Метод для расчета дельты (вызывается из AimAssist)
-    public double[] calculateDelta(double yawDelta, double pitchDelta, float dist) {
+    @Override
+    public double[] calculateDelta(double yawDelta, double pitchDelta, double dist, long timeDelta) {
         float f = (float) Math.abs(yawDelta);
         float f1 = this.getFloatByFloat2(f);
         this.floatArray[this.value3] = f1;
         this.value3 = (this.value3 + 1) % this.floatArray.length;
         float f2 = this.getFloat();
         
-        double d0 = this.smooth;
+        double d0 = 1.0; // smooth
         double d1 = dist / 3.0 * (Math.abs(yawDelta) + Math.abs(pitchDelta)) / d0;
         
-        double d4 = MathHelper.clamp(d1 * f2, this.minLerp, this.maxLerp);
+        double d4 = MathHelper.clamp(d1 * f2, 0.05, 1.5);
         
         double stepYaw = yawDelta * d4;
         double stepPitch = pitchDelta * d4;
@@ -103,6 +89,7 @@ public class LegitAim extends AimMode {
 
     @Override
     public double[] getAimPoint(Entity target) {
-        return new double[]{0.0, 0.0, 0.0};
+        // Целимся в голову
+        return new double[]{0.0, target.getHeight() * 0.85, 0.0};
     }
 }
