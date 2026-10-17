@@ -34,7 +34,8 @@ public class BogEmpty implements ClientModInitializer {
 
         // РЕНДЕР ВОТЕРМАРКИ (HUD)
         HudRenderCallback.EVENT.register((ctx, tickDelta) -> {
-            if (!Config.watermarkEnabled || mc.currentScreen instanceof ClickGUI) return;
+            MinecraftClient mc = MinecraftClient.getInstance();
+            if (mc == null || !Config.watermarkEnabled || mc.currentScreen instanceof ClickGUI) return;
             
             // Красивая фиолетовая вотермарка
             String text = "BogEmpty";
