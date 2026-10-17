@@ -5,12 +5,10 @@ import com.fox.bogempty.config.Config;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
-import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
-import net.minecraft.util.Identifier;
 import org.lwjgl.glfw.GLFW;
 
 public class ClickGUI extends Screen {
@@ -38,19 +36,17 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // === БЛЮР ===
+        // Имитация размытия (просто сильное затемнение)
         if (Config.blurEnabled) {
-            try {
-                MinecraftClient mc = MinecraftClient.getInstance();
-                Identifier blurId = Identifier.of("bogempty", "shaders/post/blur.json");
-                // Используем AW для доступа к методу
-                mc.gameRenderer.loadPostProcessor(blurId);
-            } catch (Exception ignored) {}
+            ctx.fill(0, 0, this.width, this.height, 0xB0000000);
+        } else {
+            ctx.fill(0, 0, this.width, this.height, 0x50000000);
         }
 
-        ctx.fill(0, 0, this.width, this.height, 0x50000000);
+        // Тень
         ctx.fill(panelX - 3, panelY - 3, panelX + 450 + 3, panelY + 300 + 3, 0x40000000);
         
+        // Панель
         ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL);
         ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_HEADER);
         ctx.fill(panelX, panelY + 25, panelX + 450, panelY + 26, ACCENT);
@@ -216,15 +212,6 @@ public class ClickGUI extends Screen {
         }
         if (keyCode == BogEmpty.bindGui) { this.close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
-    }
-
-    @Override
-    public void close() {
-        // Выключаем блюр при закрытии меню
-        try {
-            MinecraftClient.getInstance().gameRenderer.clearPostProcessor();
-        } catch (Exception ignored) {}
-        super.close();
     }
 
     private void updateSlider(Setting s, double mx, int xOffset) {
