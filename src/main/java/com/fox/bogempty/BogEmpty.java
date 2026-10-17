@@ -5,6 +5,9 @@ import com.fox.bogempty.gui.ClickGUI;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.module.combat.AimAssist;
 import com.fox.bogempty.module.combat.TriggerBot;
+import com.fox.bogempty.module.misc.AutoTotem;
+import com.fox.bogempty.module.player.FastPlace;
+import com.fox.bogempty.module.player.InventoryMove;
 import com.fox.bogempty.module.render.ESPModule;
 import com.fox.bogempty.module.render.Fullbright;
 import com.fox.bogempty.module.render.NoHurtCam;
@@ -20,24 +23,34 @@ import java.util.List;
 public class BogEmpty implements ClientModInitializer {
     public static final List<Module> modules = new ArrayList<>();
     private static boolean guiKeyWasDown = false;
-    public static int bindGui = 344;
+    public static int bindGui = 344; // Right Shift
 
     @Override
     public void onInitializeClient() {
         Config.load();
         
-        // Регистрация модулей
+        // === РЕГИСТРАЦИЯ ВСЕХ МОДУЛЕЙ ===
+        // Combat
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
+        
+        // Render
         modules.add(new ESPModule());
         modules.add(new Fullbright());
         modules.add(new NoHurtCam());
+        
+        // Player
+        modules.add(new FastPlace());
+        modules.add(new InventoryMove());
+        
+        // Misc
+        modules.add(new AutoTotem());
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
-            // Открытие/закрытие меню по правому шифту (344)
+            // Открытие/закрытие меню
             if (down && !guiKeyWasDown) {
                 if (mc.currentScreen == null) {
                     mc.setScreen(new ClickGUI());
@@ -47,7 +60,7 @@ public class BogEmpty implements ClientModInitializer {
             }
             guiKeyWasDown = down;
 
-            // Тикаем все включенные модули
+            // Тик всех включенных модулей
             for (Module m : modules) {
                 if (m.isEnabled()) {
                     m.onTick();
