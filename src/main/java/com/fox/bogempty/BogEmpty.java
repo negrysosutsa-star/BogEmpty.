@@ -29,11 +29,15 @@ public class BogEmpty implements ClientModInitializer {
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
             if (down && !guiKeyWasDown) {
-                if (mc.currentScreen == null) mc.setScreen(new ClickGUI());
-                else if (mc.currentScreen instanceof ClickGUI) mc.setScreen(null);
+                if (mc.currentScreen == null) {
+                    mc.setScreen(new ClickGUI());
+                } else if (mc.currentScreen instanceof ClickGUI) {
+                    mc.setScreen(null);
+                }
             }
             guiKeyWasDown = down;
 
+            // Тикаем модули
             for (Module m : modules) {
                 if (m.isEnabled()) m.onTick();
             }
