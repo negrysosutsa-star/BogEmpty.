@@ -3,14 +3,19 @@ package com.fox.bogempty.gui;
 import com.fox.bogempty.config.Config;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
+import org.lwjgl.glfw.GLFW;
 
 public class ClickGUI extends Screen {
     private int panelX = 40, panelY = 40;
     private int dragX = -1, dragY = -1;
-    private int category = 0; // 0=Combat, 1=Render
+    private int category = 0; 
     private double scrollY = 0;
     private int activeSlider = 0;
+    
+    // Переменные для биндов
+    private int activeBind = 0; // 1=Trig, 2=Aim, 3=ESP
 
     private final int ACCENT = 0xFF9D4EDD;
     private final int BG_PANEL = 0xFF161616;
@@ -23,31 +28,25 @@ public class ClickGUI extends Screen {
 
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
-        // Фон
         ctx.fill(0, 0, this.width, this.height, 0x80000000); 
-        
-        // Панель
         ctx.fill(panelX - 1, panelY - 1, panelX + 400 + 1, panelY + 280 + 1, ACCENT); 
         ctx.fill(panelX, panelY, panelX + 400, panelY + 280, BG_PANEL); 
-        ctx.fill(panelX, panelY, panelX + 100, panelY + 280, BG_CAT); // Левая панель
+        ctx.fill(panelX, panelY, panelX + 100, panelY + 280, BG_CAT);
 
-        // Лого
         ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 15, ACCENT, true);
         ctx.drawText(this.textRenderer, "v1.0", panelX + 15, panelY + 30, 0xFF888888, false);
 
-        // Категории
         drawCat(ctx, "Combat", 0, panelX + 5, panelY + 60, mouseX, mouseY);
         drawCat(ctx, "Render", 1, panelX + 5, panelY + 90, mouseX, mouseY);
 
-        // Включение скролла (защита от вылезания)
         ctx.enableScissor(panelX + 110, panelY + 20, panelX + 400, panelY + 280);
-        
         int y = panelY + 20 + (int) scrollY;
         int x = panelX + 115;
 
         if (category == 0) {
             ctx.drawText(this.textRenderer, "§7── TriggerBot ──", x, y, ACCENT, false); y += 20;
             drawToggle(ctx, "Enabled", Config.triggerEnabled, x, y, mouseX, mouseY); y += 20;
+            drawBind(ctx, "Bind", Config.bindTrigger, 1, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
             drawToggle(ctx, "Only Crits", Config.triggerOnlyCrits, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Smart Crits", Config.triggerSmartCrits, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Sprint Reset", Config.triggerSprintReset, x, y, mouseX, mouseY); y += 20;
@@ -55,6 +54,7 @@ public class ClickGUI extends Screen {
 
             ctx.drawText(this.textRenderer, "§7── AimAssist ──", x, y, ACCENT, false); y += 20;
             drawToggle(ctx, "Enabled", Config.aimEnabled, x, y, mouseX, mouseY); y += 20;
+            drawBind(ctx, "Bind", Config.bindAim, 2, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
             drawSlider(ctx, "Distance", (float)Config.aimRange, 2f, 6f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Yaw Speed", (float)Config.aimYawSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Pitch Speed", (float)Config.aimPitchSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
@@ -68,6 +68,7 @@ public class ClickGUI extends Screen {
         } else if (category == 1) {
             ctx.drawText(this.textRenderer, "§7── ESP (Player/Mobs) ──", x, y, ACCENT, false); y += 20;
             drawToggle(ctx, "ESP Enabled", Config.espEnabled, x, y, mouseX, mouseY); y += 20;
+            drawBind(ctx, "Bind", Config.bindEsp, 3, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
             drawToggle(ctx, "Show Players", Config.espPlayers, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Show Mobs", Config.espMobs, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Only Armor", Config.espFilterArmor, x, y, mouseX, mouseY); y += 20;
@@ -82,7 +83,13 @@ public class ClickGUI extends Screen {
 
         ctx.disableScissor();
 
-        // Футер
+        // Если ждем нажатия клавиши для бинда
+        if (activeBind != 0) {
+            ctx.fill(panelX, panelY, panelX + 400, panelY + 280, 0xC0000000);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу или кнопку мыши...", this.width / 2, this.height / 2, 0xFFFFFFFF);
+            ctx.drawCenteredTextWithShadow(this.textRenderer, "§7Esc — отмена", this.width / 2, this.height / 2 + 15, 0xFF888888);
+        }
+
         ctx.drawText(this.textRenderer, "https://t.me/BogEmptyy", panelX + 10, panelY + 265, 0xFF8888FF, false);
     }
 
@@ -97,17 +104,29 @@ public class ClickGUI extends Screen {
     private void drawToggle(DrawContext ctx, String text, boolean val, int x, int y, int mx, int my) {
         boolean hov = mx >= x && mx <= x + 200 && my >= y && my <= y + 12;
         ctx.drawText(this.textRenderer, text, x, y, hov ? ACCENT : TEXT, false);
-        // Кнопка (сдвинута вправо)
         int bx = x + 220;
         ctx.fill(bx, y, bx + 20, y + 10, val ? ACCENT : 0xFF333333);
         ctx.fill(val ? bx + 12 : bx + 2, y + 1, val ? bx + 19 : bx + 9, y + 9, 0xFFFFFFFF);
+    }
+
+    private void drawBind(DrawContext ctx, String text, int keyCode, int id, int x, int y, int mx, int my) {
+        String keyName = "NONE";
+        if (keyCode != -1) {
+            if (keyCode >= 0 && keyCode <= 7) {
+                String[] mouse = {"LMB", "RMB", "MMB", "MB4", "MB5"};
+                keyName = keyCode < mouse.length ? mouse[keyCode] : "MOUSE " + keyCode;
+            } else {
+                keyName = InputUtil.fromKeyCode(keyCode, 0).getLocalizedText().getString();
+            }
+        }
+        boolean hov = mx >= x && mx <= x + 250 && my >= y && my <= y + 12;
+        ctx.drawText(this.textRenderer, text + ": §d" + keyName, x, y, hov ? ACCENT : TEXT, false);
     }
 
     private void drawSlider(DrawContext ctx, String text, float val, float min, float max, int x, int y, int mx, int my) {
         int barX = x + 100, barW = 100;
         boolean hov = mx >= barX && mx <= barX + barW && my >= y && my <= y + 12;
         float pct = (val - min) / (max - min);
-        
         ctx.drawText(this.textRenderer, text, x, y, TEXT, false);
         ctx.fill(barX, y + 3, barX + barW, y + 7, 0xFF333333);
         ctx.fill(barX, y + 3, barX + (int)(barW * pct), y + 7, hov ? ACCENT : 0xFF6A1B9A);
@@ -117,6 +136,13 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
+        if (activeBind != 0) {
+            if (button == 0) { activeBind = 0; return true; } // ЛКМ отмена
+            setBind(activeBind, button); // Сохраняем кнопку мыши
+            activeBind = 0;
+            return true;
+        }
+
         if (mx >= panelX && mx <= panelX + 400 && my >= panelY && my <= panelY + 40) {
             dragX = (int) mx - panelX; dragY = (int) my - panelY; return true;
         }
@@ -131,6 +157,7 @@ public class ClickGUI extends Screen {
         if (category == 0) {
             y += 20;
             if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20; 
+            if (hit(mx, my, x, y, 250, 12)) { activeBind = 1; return true; } y += 20; // Бинд Триггера
             if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerOnlyCrits = !Config.triggerOnlyCrits; return true; } y += 20; 
             if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerSmartCrits = !Config.triggerSmartCrits; return true; } y += 20; 
             if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerSprintReset = !Config.triggerSprintReset; return true; } y += 20; 
@@ -138,6 +165,7 @@ public class ClickGUI extends Screen {
             
             y += 20; 
             if (hit(mx, my, x+220, y, 20, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20; 
+            if (hit(mx, my, x, y, 250, 12)) { activeBind = 2; return true; } y += 20; // Бинд Аима
             if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 2; updateSlider(mx); return true; } y += 20; 
             if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20; 
             if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20; 
@@ -150,6 +178,7 @@ public class ClickGUI extends Screen {
         } else if (category == 1) {
             y += 20;
             if (hit(mx, my, x+220, y, 20, 12)) { Config.espEnabled = !Config.espEnabled; return true; } y += 20;
+            if (hit(mx, my, x, y, 250, 12)) { activeBind = 3; return true; } y += 20; // Бинд ESP
             if (hit(mx, my, x+220, y, 20, 12)) { Config.espPlayers = !Config.espPlayers; return true; } y += 20;
             if (hit(mx, my, x+220, y, 20, 12)) { Config.espMobs = !Config.espMobs; return true; } y += 20;
             if (hit(mx, my, x+220, y, 20, 12)) { Config.espFilterArmor = !Config.espFilterArmor; return true; } y += 20;
@@ -162,6 +191,23 @@ public class ClickGUI extends Screen {
             if (hit(mx, my, x+220, y, 20, 12)) { Config.blurEnabled = !Config.blurEnabled; return true; }
         }
         return super.mouseClicked(mx, my, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (activeBind != 0) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) { activeBind = 0; return true; }
+            setBind(activeBind, keyCode);
+            activeBind = 0;
+            return true;
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void setBind(int id, int code) {
+        if (id == 1) Config.bindTrigger = code;
+        if (id == 2) Config.bindAim = code;
+        if (id == 3) Config.bindEsp = code;
     }
 
     private boolean hit(double mx, double my, int x, int y, int w, int h) {
