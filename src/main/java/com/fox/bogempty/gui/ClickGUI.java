@@ -13,14 +13,14 @@ public class ClickGUI extends Screen {
     private int category = 0; 
     private double scrollY = 0;
     private int activeSlider = 0;
-    
-    // Переменные для биндов
-    private int activeBind = 0; // 1=Trig, 2=Aim, 3=ESP
+    private int activeBind = 0;
 
     private final int ACCENT = 0xFF9D4EDD;
     private final int BG_PANEL = 0xFF161616;
-    private final int BG_CAT = 0xFF1F1F1F;
+    private final int BG_CAT = 0xFF1A1A1A;
+    private final int BG_CAT_ACTIVE = 0xFF2A2A2A;
     private final int TEXT = 0xFFDDDDDD;
+    private final int TEXT_DIM = 0xFF888888;
 
     public ClickGUI() {
         super(Text.literal("BogEmpty"));
@@ -29,84 +29,84 @@ public class ClickGUI extends Screen {
     @Override
     public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
         ctx.fill(0, 0, this.width, this.height, 0x80000000); 
-        ctx.fill(panelX - 1, panelY - 1, panelX + 400 + 1, panelY + 280 + 1, ACCENT); 
-        ctx.fill(panelX, panelY, panelX + 400, panelY + 280, BG_PANEL); 
-        ctx.fill(panelX, panelY, panelX + 100, panelY + 280, BG_CAT);
+        
+        // Тень и панель
+        ctx.fill(panelX - 2, panelY - 2, panelX + 450 + 2, panelY + 300 + 2, 0xFF000000); 
+        ctx.fill(panelX, panelY, panelX + 450, panelY + 300, BG_PANEL); 
+        ctx.fill(panelX, panelY, panelX + 100, panelY + 300, BG_CAT);
 
-        ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 15, ACCENT, true);
-        ctx.drawText(this.textRenderer, "v1.0", panelX + 15, panelY + 30, 0xFF888888, false);
+        // Шапка
+        ctx.fill(panelX, panelY, panelX + 450, panelY + 25, BG_CAT);
+        ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 8, ACCENT, true);
+        ctx.drawText(this.textRenderer, "v1.0", panelX + 415, panelY + 8, TEXT_DIM, false);
 
-        drawCat(ctx, "Combat", 0, panelX + 5, panelY + 60, mouseX, mouseY);
-        drawCat(ctx, "Render", 1, panelX + 5, panelY + 90, mouseX, mouseY);
+        // Категории
+        drawCat(ctx, "Combat", 0, panelX + 5, panelY + 40, mouseX, mouseY);
+        drawCat(ctx, "Render", 1, panelX + 5, panelY + 70, mouseX, mouseY);
 
-        ctx.enableScissor(panelX + 110, panelY + 20, panelX + 400, panelY + 280);
-        int y = panelY + 20 + (int) scrollY;
+        // Контент
+        ctx.enableScissor(panelX + 105, panelY + 30, panelX + 450, panelY + 300);
+        int y = panelY + 35 + (int) scrollY;
         int x = panelX + 115;
 
         if (category == 0) {
-            ctx.drawText(this.textRenderer, "§7── TriggerBot ──", x, y, ACCENT, false); y += 20;
+            // TRIGGER BOT
+            ctx.drawText(this.textRenderer, "§7TriggerBot", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.triggerEnabled, x, y, mouseX, mouseY); y += 20;
-            drawBind(ctx, "Bind", Config.bindTrigger, 1, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
-            drawToggle(ctx, "Only Crits", Config.triggerOnlyCrits, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Smart Crits", Config.triggerSmartCrits, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Sprint Reset", Config.triggerSprintReset, x, y, mouseX, mouseY); y += 20;
-            drawSlider(ctx, "Range", (float)Config.triggerRange, 2f, 6f, x, y, mouseX, mouseY); y += 30;
+            drawBind(ctx, "Bind", Config.bindTrigger, 1, x, y, mouseX, mouseY); y += 20;
+            drawEnum(ctx, "Mode", Config.triggerMode, x, y, mouseX, mouseY); y += 20;
+            drawEnum(ctx, "Targets", Config.triggerTargets, x, y, mouseX, mouseY); y += 20;
+            drawSlider(ctx, "Range", (float)Config.triggerRange, 2f, 6f, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Custom Cooldown", Config.trigCustomCooldown, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "No Sweaps", Config.trigNoSweaps, x, y, mouseX, mouseY); y += 25;
 
-            ctx.drawText(this.textRenderer, "§7── AimAssist ──", x, y, ACCENT, false); y += 20;
+            // AIM
+            ctx.drawText(this.textRenderer, "§7AimAssist", x, y, TEXT_DIM, false); y += 15;
             drawToggle(ctx, "Enabled", Config.aimEnabled, x, y, mouseX, mouseY); y += 20;
-            drawBind(ctx, "Bind", Config.bindAim, 2, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
+            drawBind(ctx, "Bind", Config.bindAim, 2, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Distance", (float)Config.aimRange, 2f, 6f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Yaw Speed", (float)Config.aimYawSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
             drawSlider(ctx, "Pitch Speed", (float)Config.aimPitchSpeed, 5f, 60f, x, y, mouseX, mouseY); y += 20;
-            drawSlider(ctx, "FOV", (float)Config.aimFov, 30f, 180f, x, y, mouseX, mouseY); y += 30;
-
-            ctx.drawText(this.textRenderer, "§7── Targets ──", x, y, ACCENT, false); y += 20;
-            drawToggle(ctx, "Players", Config.targetPlayers, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Mobs", Config.targetMobs, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Animals", Config.targetAnimals, x, y, mouseX, mouseY); y += 20;
+            drawSlider(ctx, "FOV", (float)Config.aimFov, 30f, 180f, x, y, mouseX, mouseY); y += 20;
 
         } else if (category == 1) {
-            ctx.drawText(this.textRenderer, "§7── ESP (Player/Mobs) ──", x, y, ACCENT, false); y += 20;
-            drawToggle(ctx, "ESP Enabled", Config.espEnabled, x, y, mouseX, mouseY); y += 20;
-            drawBind(ctx, "Bind", Config.bindEsp, 3, x, y, mouseX, mouseY); y += 20; // <-- НОВЫЙ БИНД
-            drawToggle(ctx, "Show Players", Config.espPlayers, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Show Mobs", Config.espMobs, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Only Armor", Config.espFilterArmor, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Only Naked", Config.espFilterNaked, x, y, mouseX, mouseY); y += 20;
+            ctx.drawText(this.textRenderer, "§7ESP", x, y, TEXT_DIM, false); y += 15;
+            drawToggle(ctx, "Enabled", Config.espEnabled, x, y, mouseX, mouseY); y += 20;
+            drawBind(ctx, "Bind", Config.bindEsp, 3, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Players", Config.espPlayers, x, y, mouseX, mouseY); y += 20;
+            drawToggle(ctx, "Mobs", Config.espMobs, x, y, mouseX, mouseY); y += 20;
             drawToggle(ctx, "Fill Box", Config.espFill, x, y, mouseX, mouseY); y += 20;
-            drawSlider(ctx, "Thickness", Config.espLineThickness, 0.5f, 5f, x, y, mouseX, mouseY); y += 30;
-            
-            ctx.drawText(this.textRenderer, "§7── Client ──", x, y, ACCENT, false); y += 20;
-            drawToggle(ctx, "Watermark", Config.watermarkEnabled, x, y, mouseX, mouseY); y += 20;
-            drawToggle(ctx, "Blur Menu", Config.blurEnabled, x, y, mouseX, mouseY); y += 20;
+            drawSlider(ctx, "Thickness", Config.espLineThickness, 0.5f, 5f, x, y, mouseX, mouseY); y += 20;
         }
 
         ctx.disableScissor();
 
-        // Если ждем нажатия клавиши для бинда
+        // Футер (ссылка)
+        ctx.drawText(this.textRenderer, "https://t.me/BogEmptyy", panelX + 10, panelY + 285, 0xFF8888FF, false);
+
+        // Окно бинда
         if (activeBind != 0) {
-            ctx.fill(panelX, panelY, panelX + 400, panelY + 280, 0xC0000000);
+            ctx.fill(panelX, panelY, panelX + 450, panelY + 300, 0xC0000000);
             ctx.drawCenteredTextWithShadow(this.textRenderer, "§dНажми клавишу или кнопку мыши...", this.width / 2, this.height / 2, 0xFFFFFFFF);
             ctx.drawCenteredTextWithShadow(this.textRenderer, "§7Esc — отмена", this.width / 2, this.height / 2 + 15, 0xFF888888);
         }
-
-        ctx.drawText(this.textRenderer, "https://t.me/BogEmptyy", panelX + 10, panelY + 265, 0xFF8888FF, false);
     }
 
     private void drawCat(DrawContext ctx, String name, int id, int x, int y, int mx, int my) {
         boolean act = category == id;
         boolean hov = mx >= x && mx <= x + 90 && my >= y && my <= y + 20;
-        if (act) ctx.fill(x, y, x + 90, y + 20, ACCENT);
-        else if (hov) ctx.fill(x, y, x + 90, y + 20, 0xFF333333);
-        ctx.drawText(this.textRenderer, name, x + 10, y + 6, act ? 0xFFFFFFFF : 0xFFBBBBBB, false);
+        if (act) ctx.fill(x, y, x + 90, y + 20, BG_CAT_ACTIVE);
+        else if (hov) ctx.fill(x, y, x + 90, y + 20, 0xFF222222);
+        if (act) ctx.fill(x, y, x + 2, y + 20, ACCENT); // Полоска слева
+        ctx.drawText(this.textRenderer, name, x + 10, y + 6, act ? 0xFFFFFFFF : TEXT_DIM, false);
     }
 
     private void drawToggle(DrawContext ctx, String text, boolean val, int x, int y, int mx, int my) {
-        boolean hov = mx >= x && mx <= x + 200 && my >= y && my <= y + 12;
-        ctx.drawText(this.textRenderer, text, x, y, hov ? ACCENT : TEXT, false);
-        int bx = x + 220;
-        ctx.fill(bx, y, bx + 20, y + 10, val ? ACCENT : 0xFF333333);
-        ctx.fill(val ? bx + 12 : bx + 2, y + 1, val ? bx + 19 : bx + 9, y + 9, 0xFFFFFFFF);
+        boolean hov = mx >= x && mx <= x + 260 && my >= y && my <= y + 15;
+        ctx.drawText(this.textRenderer, text, x, y + 2, hov ? ACCENT : TEXT, false);
+        int bx = x + 250;
+        ctx.fill(bx, y, bx + 25, y + 12, val ? ACCENT : 0xFF333333);
+        ctx.fill(val ? bx + 14 : bx + 2, y + 2, val ? bx + 23 : bx + 11, y + 10, 0xFFFFFFFF);
     }
 
     private void drawBind(DrawContext ctx, String text, int keyCode, int id, int x, int y, int mx, int my) {
@@ -119,76 +119,80 @@ public class ClickGUI extends Screen {
                 keyName = InputUtil.fromKeyCode(keyCode, 0).getLocalizedText().getString();
             }
         }
-        boolean hov = mx >= x && mx <= x + 250 && my >= y && my <= y + 12;
-        ctx.drawText(this.textRenderer, text + ": §d" + keyName, x, y, hov ? ACCENT : TEXT, false);
+        boolean hov = mx >= x && mx <= x + 260 && my >= y && my <= y + 15;
+        ctx.drawText(this.textRenderer, text + ": §d" + keyName, x, y + 2, hov ? ACCENT : TEXT, false);
+    }
+
+    private void drawEnum(DrawContext ctx, String text, String val, int x, int y, int mx, int my) {
+        boolean hov = mx >= x && mx <= x + 260 && my >= y && my <= y + 15;
+        ctx.drawText(this.textRenderer, text + ": §d" + val, x, y + 2, hov ? ACCENT : TEXT, false);
     }
 
     private void drawSlider(DrawContext ctx, String text, float val, float min, float max, int x, int y, int mx, int my) {
-        int barX = x + 100, barW = 100;
+        int barX = x + 130, barW = 120;
         boolean hov = mx >= barX && mx <= barX + barW && my >= y && my <= y + 12;
         float pct = (val - min) / (max - min);
-        ctx.drawText(this.textRenderer, text, x, y, TEXT, false);
-        ctx.fill(barX, y + 3, barX + barW, y + 7, 0xFF333333);
-        ctx.fill(barX, y + 3, barX + (int)(barW * pct), y + 7, hov ? ACCENT : 0xFF6A1B9A);
-        ctx.fill(barX + (int)(barW * pct) - 2, y, barX + (int)(barW * pct) + 2, y + 10, 0xFFFFFFFF);
-        ctx.drawText(this.textRenderer, String.format("%.1f", val), barX + barW + 10, y, ACCENT, false);
+        ctx.drawText(this.textRenderer, text, x, y + 2, TEXT, false);
+        ctx.fill(barX, y + 4, barX + barW, y + 8, 0xFF333333);
+        ctx.fill(barX, y + 4, barX + (int)(barW * pct), y + 8, hov ? ACCENT : 0xFF6A1B9A);
+        ctx.fill(barX + (int)(barW * pct) - 2, y + 1, barX + (int)(barW * pct) + 2, y + 11, 0xFFFFFFFF);
+        ctx.drawText(this.textRenderer, String.format("%.1f", val), barX + barW + 5, y + 2, TEXT_DIM, false);
     }
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
         if (activeBind != 0) {
-            if (button == 0) { activeBind = 0; return true; } // ЛКМ отмена
-            setBind(activeBind, button); // Сохраняем кнопку мыши
+            if (button == 0) { activeBind = 0; return true; }
+            setBind(activeBind, button);
             activeBind = 0;
             return true;
         }
 
-        if (mx >= panelX && mx <= panelX + 400 && my >= panelY && my <= panelY + 40) {
+        if (mx >= panelX && mx <= panelX + 450 && my >= panelY && my <= panelY + 25) {
             dragX = (int) mx - panelX; dragY = (int) my - panelY; return true;
         }
         if (mx >= panelX + 5 && mx <= panelX + 95) {
-            if (my >= panelY + 60 && my <= panelY + 80) { category = 0; return true; }
-            if (my >= panelY + 90 && my <= panelY + 110) { category = 1; return true; }
+            if (my >= panelY + 40 && my <= panelY + 60) { category = 0; return true; }
+            if (my >= panelY + 70 && my <= panelY + 90) { category = 1; return true; }
         }
 
-        int y = panelY + 20 + (int) scrollY;
+        int y = panelY + 35 + (int) scrollY;
         int x = panelX + 115;
 
         if (category == 0) {
-            y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20; 
-            if (hit(mx, my, x, y, 250, 12)) { activeBind = 1; return true; } y += 20; // Бинд Триггера
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerOnlyCrits = !Config.triggerOnlyCrits; return true; } y += 20; 
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerSmartCrits = !Config.triggerSmartCrits; return true; } y += 20; 
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.triggerSprintReset = !Config.triggerSprintReset; return true; } y += 20; 
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 1; updateSlider(mx); return true; } y += 30;
-            
-            y += 20; 
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20; 
-            if (hit(mx, my, x, y, 250, 12)) { activeBind = 2; return true; } y += 20; // Бинд Аима
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 2; updateSlider(mx); return true; } y += 20; 
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20; 
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20; 
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 5; updateSlider(mx); return true; } y += 30;
-            
-            y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.targetPlayers = !Config.targetPlayers; return true; } y += 20; 
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.targetMobs = !Config.targetMobs; return true; } y += 20; 
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.targetAnimals = !Config.targetAnimals; return true; }
+            y += 15;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.triggerEnabled = !Config.triggerEnabled; return true; } y += 20;
+            if (hit(mx, my, x, y, 260, 15)) { activeBind = 1; return true; } y += 20;
+            if (hit(mx, my, x, y, 260, 15)) { 
+                Config.triggerMode = Config.triggerMode.equals("Smart") ? "OnlyCrits" : "Smart";
+                return true; 
+            } y += 20;
+            if (hit(mx, my, x, y, 260, 15)) { 
+                if (Config.triggerTargets.equals("Players")) Config.triggerTargets = "Mobs";
+                else if (Config.triggerTargets.equals("Mobs")) Config.triggerTargets = "All";
+                else Config.triggerTargets = "Players";
+                return true; 
+            } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 1; updateSlider(mx); return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.trigCustomCooldown = !Config.trigCustomCooldown; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.trigNoSweaps = !Config.trigNoSweaps; return true; } y += 25;
+
+            y += 15;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.aimEnabled = !Config.aimEnabled; return true; } y += 20;
+            if (hit(mx, my, x, y, 260, 15)) { activeBind = 2; return true; } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 2; updateSlider(mx); return true; } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 3; updateSlider(mx); return true; } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 4; updateSlider(mx); return true; } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 5; updateSlider(mx); return true; } y += 20;
+
         } else if (category == 1) {
-            y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espEnabled = !Config.espEnabled; return true; } y += 20;
-            if (hit(mx, my, x, y, 250, 12)) { activeBind = 3; return true; } y += 20; // Бинд ESP
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espPlayers = !Config.espPlayers; return true; } y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espMobs = !Config.espMobs; return true; } y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espFilterArmor = !Config.espFilterArmor; return true; } y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espFilterNaked = !Config.espFilterNaked; return true; } y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.espFill = !Config.espFill; return true; } y += 20;
-            if (hit(mx, my, x+100, y, 100, 12)) { activeSlider = 6; updateSlider(mx); return true; } y += 30;
-            
-            y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.watermarkEnabled = !Config.watermarkEnabled; return true; } y += 20;
-            if (hit(mx, my, x+220, y, 20, 12)) { Config.blurEnabled = !Config.blurEnabled; return true; }
+            y += 15;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espEnabled = !Config.espEnabled; return true; } y += 20;
+            if (hit(mx, my, x, y, 260, 15)) { activeBind = 3; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espPlayers = !Config.espPlayers; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espMobs = !Config.espMobs; return true; } y += 20;
+            if (hit(mx, my, x+250, y, 25, 12)) { Config.espFill = !Config.espFill; return true; } y += 20;
+            if (hit(mx, my, x+130, y, 120, 12)) { activeSlider = 6; updateSlider(mx); return true; }
         }
         return super.mouseClicked(mx, my, button);
     }
@@ -201,6 +205,7 @@ public class ClickGUI extends Screen {
             activeBind = 0;
             return true;
         }
+        if (keyCode == Config.bindGui) { this.close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
@@ -215,7 +220,7 @@ public class ClickGUI extends Screen {
     }
 
     private void updateSlider(double mx) {
-        float pct = (float)((mx - (panelX + 115 + 100)) / 100.0);
+        float pct = (float)((mx - (panelX + 115 + 130)) / 120.0);
         pct = Math.max(0f, Math.min(1f, pct));
         switch (activeSlider) {
             case 1 -> Config.triggerRange = 2f + pct * 4f;
@@ -231,7 +236,7 @@ public class ClickGUI extends Screen {
     public boolean mouseScrolled(double mouseX, double mouseY, double hAmount, double vAmount) {
         scrollY += vAmount * 20;
         if (scrollY > 0) scrollY = 0;
-        if (scrollY < -60) scrollY = -60;
+        if (scrollY < -100) scrollY = -100;
         return super.mouseScrolled(mouseX, mouseY, hAmount, vAmount);
     }
 
