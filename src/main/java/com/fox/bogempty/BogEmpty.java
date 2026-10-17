@@ -31,7 +31,6 @@ public class BogEmpty implements ClientModInitializer {
     public void onInitializeClient() {
         Config.load();
         
-        // === РЕГИСТРАЦИЯ ВСЕХ МОДУЛЕЙ ===
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
         modules.add(new ESPModule());
@@ -42,22 +41,16 @@ public class BogEmpty implements ClientModInitializer {
         modules.add(new InventoryMove());
         modules.add(new AutoTotem());
 
-        // 1. ЛОГИКА (Тик 20 раз в секунду)
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             long handle = mc.getWindow().getHandle();
             boolean down = GLFW.glfwGetKey(handle, bindGui) == GLFW.GLFW_PRESS;
             
-            // Открытие/закрытие меню
             if (down && !guiKeyWasDown) {
-                if (mc.currentScreen == null) {
-                    mc.setScreen(new ClickGUI());
-                } else if (mc.currentScreen instanceof ClickGUI) {
-                    mc.setScreen(null);
-                }
+                if (mc.currentScreen == null) mc.setScreen(new ClickGUI());
+                else if (mc.currentScreen instanceof ClickGUI) mc.setScreen(null);
             }
             guiKeyWasDown = down;
 
-            // Обновляем логику модулей (кроме Аима)
             for (Module m : modules) {
                 if (m.isEnabled() && !(m instanceof AimAssist)) {
                     m.onTick();
@@ -65,7 +58,6 @@ public class BogEmpty implements ClientModInitializer {
             }
         });
 
-        // 2. РЕНДЕР КАМЕРЫ (Плавный Аим каждый кадр)
         WorldRenderEvents.START.register(ctx -> {
             for (Module m : modules) {
                 if (m.isEnabled() && m instanceof AimAssist aim) {
@@ -74,11 +66,9 @@ public class BogEmpty implements ClientModInitializer {
             }
         });
 
-        // 3. 3D РЕНДЕР (Боксы, Частицы, Неймтеги)
         WorldRenderEvents.LAST.register(ctx -> {
             for (Module m : modules) {
                 if (!m.isEnabled()) continue;
-                
                 if (m instanceof ESPModule esp) {
                     esp.onRender(ctx.matrixStack(), ctx.camera(), ctx.tickCounter().getTickDelta(true));
                 } else if (m instanceof Nametags nt) {
@@ -86,19 +76,13 @@ public class BogEmpty implements ClientModInitializer {
                 }
             }
         });
+    }
 
-        // 4. HUD РЕНДЕР (Стрелки вокруг прицела)
-        HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
-            MinecraftClient mc = MinecraftClient.getInstance();
-            if (mc.player == null || mc.currentScreen instanceof ClickGUI) return;
-
-            float tickDelta = tickCounter.getTickDelta(true);
-
-            for (Module m : modules) {
-                if (m instanceof ESPModule esp && esp.isEnabled()) {
-                    esp.onRender2D(ctx, tickDelta);
-                }
-            }
-        });
+    // МЕТОД ДЛЯ ПОЛУЧЕНИЯ МОДУЛЯ (чтобы TriggerBot мог вызвать AimAssist)
+    public static <T extends Module> T getModule(Class<T> clazz) {
+        for (Module m : modules) {
+            if (clazz.isInstance(m)) return clazz.cast(m);
+        }
+        return null;
     }
 }
