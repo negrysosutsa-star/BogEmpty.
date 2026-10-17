@@ -30,7 +30,6 @@ public class BogEmpty implements ClientModInitializer {
     public void onInitializeClient() {
         Config.load();
         
-        // Регистрация модулей
         modules.add(new TriggerBot());
         modules.add(new AimAssist());
         modules.add(new ESPModule());
@@ -55,15 +54,20 @@ public class BogEmpty implements ClientModInitializer {
             }
         });
 
-        // 3D Рендер (если понадобится, например, боксы)
         WorldRenderEvents.LAST.register(ctx -> {
-            // Тут пока пусто, так как стрелки мы перенесли в HUD
+            for (Module m : modules) {
+                if (m instanceof ESPModule esp && esp.isEnabled()) {
+                    // В 3D рендере tickDelta тоже нужно доставать правильно, если понадобится
+                }
+            }
         });
 
-        // HUD Рендер (Стрелки / Радар)
-        HudRenderCallback.EVENT.register((ctx, tickDelta) -> {
+        // ИСПРАВЛЕНИЕ ЗДЕСЬ
+        HudRenderCallback.EVENT.register((ctx, tickCounter) -> {
             MinecraftClient mc = MinecraftClient.getInstance();
             if (mc.player == null || mc.currentScreen instanceof ClickGUI) return;
+
+            float tickDelta = tickCounter.getTickDelta(true); // Достаем float из RenderTickCounter
 
             for (Module m : modules) {
                 if (m instanceof ESPModule esp && esp.isEnabled()) {
