@@ -9,9 +9,7 @@ import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.mob.MobEntity;
-import net.minecraft.entity.passive.AnimalEntity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemStack;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -37,8 +35,7 @@ public class ESPModule {
             if (!(e instanceof LivingEntity le) || le == mc.player || !le.isAlive()) continue;
             
             boolean isPlayer = le instanceof PlayerEntity;
-            boolean isMob = le instanceof MobEntity && !(le instanceof AnimalEntity);
-            
+            boolean isMob = le instanceof MobEntity;
             if (isPlayer && !Config.espPlayers) continue;
             if (isMob && !Config.espMobs) continue;
             if (!isPlayer && !isMob) continue;
@@ -53,10 +50,6 @@ public class ESPModule {
             double z = MathHelper.lerp(tickDelta, le.prevZ, le.getZ()) - camPos.z;
 
             Box box = le.getBoundingBox();
-            float thickness = Config.espScaleByDistance ? Math.max(1.0f, Config.espLineThickness * (float)(1.0 - Math.min(1.0, Math.sqrt(dist) / 128.0))) : Config.espLineThickness;
-            
-            RenderSystem.lineWidth(thickness);
-
             matrices.push();
             matrices.translate(x, y, z);
             Matrix4f m = matrices.peek().getPositionMatrix();
@@ -64,10 +57,13 @@ public class ESPModule {
             float w = (float)(box.maxX - box.minX) / 2f;
             float h = (float)(box.maxY - box.minY);
 
+            // Черная обводка
             if (Config.espOutline) {
                 drawBox(m, w + 0.02f, h + 0.02f, 0xFF000000, 0);
             }
-            drawBox(m, w, h, Config.espLineColor, Config.espFill ? Config.espFillColor : 0);
+            // Фиолетовый бокс
+            drawBox(m, w, h, 0xFF9D4EDD, Config.espFill ? 0x409D4EDD : 0);
+            
             matrices.pop();
         }
 
