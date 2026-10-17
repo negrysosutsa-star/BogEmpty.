@@ -9,6 +9,9 @@
   "entrypoints": {
     "client": ["com.fox.bogempty.BogEmpty"]
   },
+  "mixins": [
+    "bogempty.mixins.json"
+  ],
   "depends": {
     "fabricloader": ">=0.16.0",
     "fabric-api": "*",
@@ -16,4 +19,3 @@
     "java": ">=21"
   }
 }
-"mixins": ["bogempty.mixins.json"],
