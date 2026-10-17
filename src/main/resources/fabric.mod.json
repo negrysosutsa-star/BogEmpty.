@@ -1,11 +1,12 @@
 {
   "schemaVersion": 1,
   "id": "bogempty",
-  "version": "${version}",
+  "version": "1.0.0",
   "name": "BogEmpty",
   "description": "BogEmpty Client",
   "authors": ["Fox"],
   "environment": "client",
+  "accessWidener": "bogempty.accesswidener",
   "entrypoints": {
     "client": ["com.fox.bogempty.BogEmpty"]
   },
