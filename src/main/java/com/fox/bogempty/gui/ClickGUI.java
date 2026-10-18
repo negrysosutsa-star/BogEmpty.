@@ -5,6 +5,7 @@ import com.fox.bogempty.config.Config;
 import com.fox.bogempty.module.Category;
 import com.fox.bogempty.module.Module;
 import com.fox.bogempty.setting.Setting;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.InputUtil;
@@ -45,8 +46,9 @@ public class ClickGUI extends Screen {
         
         ctx.drawText(this.textRenderer, "§lBogEmpty", panelX + 15, panelY + 12, ACCENT, true);
         
-        // FPS Счетчик в меню
-        ctx.drawText(this.textRenderer, "§8FPS: §f" + mc.getCurrentFps(), panelX + 420, panelY + 12, TEXT_DIM, false);
+        // FPS Счетчик в меню (ИСПРАВЛЕНО ЗДЕСЬ)
+        int fps = MinecraftClient.getInstance().getCurrentFps();
+        ctx.drawText(this.textRenderer, "§8FPS: §f" + fps, panelX + 420, panelY + 12, TEXT_DIM, false);
 
         // Категории
         ctx.fill(panelX, panelY + 36, panelX + 120, panelY + 350, 0xFF141414);
@@ -139,7 +141,6 @@ public class ClickGUI extends Screen {
         }
     }
 
-    // Вспомогательный метод для отображения текущего бинда
     private String getKeyName(Module m) {
         int key = -1;
         if (m.getName().equals("TriggerBot")) key = Config.bindTrigger;
@@ -157,19 +158,16 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean mouseClicked(double mx, double my, int button) {
-        // 1. Обработка клика по бинду (мышка)
         if (activeBind != null) {
             saveBind(activeBind.getName(), button);
             activeBind = null;
             return true;
         }
 
-        // 2. Драг окна
         if (mx >= panelX && mx <= panelX + 480 && my >= panelY && my <= panelY + 35) {
             dragX = (int) mx - panelX; dragY = (int) my - panelY; return true;
         }
 
-        // 3. Клик по категориям
         int catY = panelY + 50;
         for (Category cat : Category.values()) {
             if (mx >= panelX + 10 && mx <= panelX + 120 && my >= catY && my <= catY + 24) {
@@ -178,7 +176,6 @@ public class ClickGUI extends Screen {
             catY += 30;
         }
 
-        // 4. Клик по модулям и настройкам
         int y = panelY + 50 + (int) scrollY;
         int x = panelX + 135;
 
@@ -187,7 +184,7 @@ public class ClickGUI extends Screen {
 
             if (mx >= x && mx <= x + 320 && my >= y && my <= y + 22) {
                 if (mx >= x + 235 && mx <= x + 290) {
-                    activeBind = m; // Начинаем биндить
+                    activeBind = m;
                 } else {
                     m.toggle();
                 }
@@ -218,7 +215,6 @@ public class ClickGUI extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        // 1. Обработка бинда (клавиатура)
         if (activeBind != null) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) { activeBind = null; return true; }
             saveBind(activeBind.getName(), keyCode);
@@ -226,12 +222,10 @@ public class ClickGUI extends Screen {
             return true;
         }
         
-        // 2. Закрытие меню
         if (keyCode == Config.bindGui) { this.close(); return true; }
         return super.keyPressed(keyCode, scanCode, modifiers);
     }
 
-    // Метод сохранения бинда в Config
     private void saveBind(String moduleName, int key) {
         if (moduleName.equals("TriggerBot")) Config.bindTrigger = key;
         else if (moduleName.equals("AimAssist")) Config.bindAim = key;
