@@ -21,6 +21,7 @@ import java.util.List;
 
 public class AimAssist extends Module {
     private final Setting mode = new Setting("Mode", "LegitAim", new String[]{"LegitAim", "FreeAim"});
+    private final Setting priority = new Setting("Priority", "Angle", new String[]{"Distance", "Health", "Angle"});
     private final Setting range = new Setting("Range", 4.5f, 2.0f, 8.0f);
     private final Setting fov = new Setting("FOV", 90.0f, 10.0f, 360.0f);
     private final Setting speed = new Setting("Speed", 1.0f, 0.1f, 3.0f);
@@ -28,10 +29,13 @@ public class AimAssist extends Module {
 
     private final List<AimMode> aimModes = new ArrayList<>();
     private Entity lockedTarget = null;
+    private Entity lastHitTarget = null;
+    private long lastHitTime = 0;
 
     public AimAssist() {
         super("AimAssist", Category.COMBAT);
         addSetting(mode);
+        addSetting(priority);
         addSetting(range);
         addSetting(fov);
         addSetting(speed);
@@ -49,12 +53,21 @@ public class AimAssist extends Module {
         AimMode currentMode = getMode();
         if (currentMode != null) currentMode.update();
 
-        // Сброс цели
-        if (lockedTarget != null && (!lockedTarget.isAlive() || p.squaredDistanceTo(lockedTarget) > range.getFloat() * range.getFloat())) {
-            lockedTarget = null;
+        // Удержание цели после удара
+        long now = System.currentTimeMillis();
+        if (lastHitTarget != null && now - lastHitTime > 3000) {
+            lastHitTarget = null; 
         }
-        if (lockedTarget == null) {
-            lockedTarget = getTarget(mc, p);
+
+        if (lastHitTarget != null && lastHitTarget.isAlive() && p.squaredDistanceTo(lastHitTarget) <= range.getFloat() * range.getFloat()) {
+            lockedTarget = lastHitTarget;
+        } else {
+            if (lockedTarget != null && (!lockedTarget.isAlive() || p.squaredDistanceTo(lockedTarget) > range.getFloat() * range.getFloat())) {
+                lockedTarget = null;
+            }
+            if (lockedTarget == null) {
+                lockedTarget = getTarget(mc, p);
+            }
         }
 
         if (lockedTarget == null) return;
@@ -77,17 +90,15 @@ public class AimAssist extends Module {
         float stepPitch = 0;
 
         if (currentMode != null) {
-            // Вызываем математику режима
             double[] delta = currentMode.calculateDelta(yawDelta, pitchDelta, dist, 50);
             stepYaw = (float) delta[0];
             stepPitch = (float) delta[1];
         }
 
-        // Применяем слайдер скорости
         stepYaw *= speed.getFloat();
         stepPitch *= speed.getFloat();
 
-        // GCD-фикс (плавность под сенсу)
+        // GCD Fix
         float sens = mc.options.getMouseSensitivity().getValue().floatValue();
         float f = sens * 0.6f + 0.2f;
         float gcd = f * f * f * 1.2f;
@@ -96,6 +107,11 @@ public class AimAssist extends Module {
 
         p.setYaw(p.getYaw() + stepYaw);
         p.setPitch(MathHelper.clamp(p.getPitch() + stepPitch, -90f, 90f));
+    }
+
+    public void onAttack(Entity target) {
+        this.lastHitTarget = target;
+        this.lastHitTime = System.currentTimeMillis();
     }
 
     private AimMode getMode() {
@@ -112,7 +128,7 @@ public class AimAssist extends Module {
         Box search = p.getBoundingBox().stretch(look.multiply(range.getFloat())).expand(1.0);
 
         Entity best = null;
-        double bestDist = Double.MAX_VALUE;
+        double bestVal = Double.MAX_VALUE;
 
         for (Entity e : mc.world.getOtherEntities(p, search)) {
             if (!(e instanceof LivingEntity le) || !le.isAlive()) continue;
@@ -126,9 +142,14 @@ public class AimAssist extends Module {
             double dot = dir.dotProduct(look);
             if (dot < Math.cos(Math.toRadians(fov.getFloat() / 2.0))) continue;
 
-            double d = p.squaredDistanceTo(e);
-            if (d < bestDist) {
-                bestDist = d;
+            String prio = priority.getEnum();
+            double val;
+            if (prio.equals("Distance")) val = p.squaredDistanceTo(e);
+            else if (prio.equals("Health")) val = le.getHealth();
+            else val = Math.acos(dot);
+
+            if (val < bestVal) {
+                bestVal = val;
                 best = e;
             }
         }
